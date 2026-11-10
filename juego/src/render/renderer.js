@@ -7,13 +7,14 @@ import { createDetailTextures } from '../world/detailTex.js';
 import { Atmosphere } from '../world/atmosphere.js';
 import { Sky } from '../world/sky.js';
 import { Ocean } from '../world/ocean.js';
+import { Clouds } from '../world/clouds.js';
 import { PostFX } from './post.js';
 
 export const QUALITY = {
-  low: { N: 2048, M: 64, scale: 0.6, fxaa: true },
-  medium: { N: 2048, M: 128, scale: 0.8, fxaa: true },
-  high: { N: 4096, M: 128, scale: 1.0, fxaa: true },
-  ultra: { N: 4096, M: 256, scale: 1.0, fxaa: true },
+  low: { N: 2048, M: 64, scale: 0.6, fxaa: true, clouds: { res: 64, steps: 36, lightSteps: 4, scale: 0.34, shadowRes: 256 } },
+  medium: { N: 2048, M: 128, scale: 0.8, fxaa: true, clouds: { res: 96, steps: 52, lightSteps: 5, scale: 0.5, shadowRes: 512 } },
+  high: { N: 4096, M: 128, scale: 1.0, fxaa: true, clouds: { res: 128, steps: 72, lightSteps: 5, scale: 0.5, shadowRes: 512 } },
+  ultra: { N: 4096, M: 256, scale: 1.0, fxaa: true, clouds: { res: 128, steps: 96, lightSteps: 6, scale: 0.5, shadowRes: 1024 } },
 };
 
 export class Renderer {
@@ -29,7 +30,9 @@ export class Renderer {
   async init(airports, onProgress = () => {}) {
     const gl = this.gl;
     this.terrainData = new TerrainData(gl, this.q.N);
-    await this.terrainData.bake(airports, (f) => onProgress(f * 0.9));
+    await this.terrainData.bake(airports, (f) => onProgress(f * 0.75));
+    this.clouds = new Clouds(gl, this.q.clouds);
+    await this.clouds.init((f) => onProgress(0.75 + f * 0.24));
     this.detail = createDetailTextures(gl, 512);
     this.terrain = new Terrain(gl, this.terrainData, this.detail, this.q.M);
     this.atmosphere = new Atmosphere(gl);
@@ -44,6 +47,7 @@ export class Renderer {
     this.outW = canvasW; this.outH = canvasH;
     const w = Math.max(16, Math.round(canvasW * this.q.scale)), h = Math.max(16, Math.round(canvasH * this.q.scale));
     this.post.resize(w, h);
+    this.clouds.resize(w, h);
   }
 
   // Distancia aproximada de la cámara al terreno más cercano (para LOD y plano cercano).
@@ -93,6 +97,9 @@ export class Renderer {
     this.atmosphere.update(cam.pos[1], env.sunDir, env.moonDir, sunE, moonE, cam.rays);
 
     const vp = [post.w, post.h];
+    const ctx = { cam, env, atmosphere: this.atmosphere, terrain: this.terrain, ocean: this.ocean, clouds: this.clouds, viewport: vp, exposure: ex, dt };
+    this.ctx = ctx;
+    this.clouds.update(ctx);
     bindFBO(gl, post.sceneFBO);
     gl.depthMask(true);
     gl.clearColor(0, 0, 0, 1);
@@ -101,10 +108,11 @@ export class Renderer {
     gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LESS);
     gl.enable(gl.CULL_FACE); gl.cullFace(gl.BACK);
     gl.disable(gl.BLEND);
-    this.terrain.render(cam, this.atmosphere, vp, this.clear);
-    if (drawScene) drawScene(vp, ex);
+    this.terrain.render(ctx, this.clear);
+    if (drawScene) drawScene(ctx);
     gl.disable(gl.CULL_FACE);
-    this.sky.render(cam, this.atmosphere, this.terrain, env, vp, ex, this.ocean);
+    this.sky.render(ctx);
+    this.clouds.render(ctx, post.sceneColorFBO, post.sceneDepth);
     const night = clamp((Math.log10(ex) - 2.2) / 2.5, 0, 1) * 0.85;
     post.render(this.outW, this.outH, ex, env.time, night);
   }

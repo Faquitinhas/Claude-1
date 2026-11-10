@@ -215,7 +215,8 @@ export class PostFX {
     gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
     this.sync = null;
     this.syncExposure = 1;
-    this.measured = null;   // {logLum (pre-expuesto), exposure}
+    this.syncMeter = false; // lectura bloqueante (solo pruebas)
+    this.syncResult = null;
     this.settings = { bloom: 0.045, vignette: 0.22, operator: 1, saturation: 1.0, contrast: 1.0, fxaa: true };
     this._buf = new Uint8Array(4);
   }
@@ -228,6 +229,7 @@ export class PostFX {
     this.sceneColor = createTexture(gl, { width: w, height: h, format: 'rgba16f', filter: 'linear' });
     this.sceneDepth = createTexture(gl, { width: w, height: h, format: 'depth24', filter: 'nearest' });
     this.sceneFBO = createFBO(gl, [this.sceneColor], this.sceneDepth);
+    this.sceneColorFBO = createFBO(gl, [this.sceneColor]); // solo color (para leer la profundidad mientras se compone)
     this.ldr = createTexture(gl, { width: w, height: h, format: 'rgba8', filter: 'linear' });
     this.ldrFBO = createFBO(gl, [this.ldr]);
     this.levels = [];
@@ -245,7 +247,7 @@ export class PostFX {
     const gl = this.gl;
     if (!this.sceneColor) return;
     for (const t of [this.sceneColor, this.sceneDepth, this.ldr]) gl.deleteTexture(t.tex);
-    gl.deleteFramebuffer(this.sceneFBO.fbo); gl.deleteFramebuffer(this.ldrFBO.fbo);
+    gl.deleteFramebuffer(this.sceneFBO.fbo); gl.deleteFramebuffer(this.sceneColorFBO.fbo); gl.deleteFramebuffer(this.ldrFBO.fbo);
     for (const l of this.levels) {
       gl.deleteTexture(l.down.tex); gl.deleteTexture(l.up.tex);
       gl.deleteFramebuffer(l.fDown.fbo); gl.deleteFramebuffer(l.fUp.fbo);
@@ -256,6 +258,7 @@ export class PostFX {
   // Consulta (sin bloquear) el resultado de la medición lanzada en un frame anterior.
   pollMeter() {
     const gl = this.gl;
+    if (this.syncResult) { const r = this.syncResult; this.syncResult = null; return r; }
     if (!this.sync) return null;
     const st = gl.clientWaitSync(this.sync, 0, 0);
     if (st === gl.TIMEOUT_EXPIRED) return null;
@@ -283,7 +286,15 @@ export class PostFX {
       src = l.down; sw = l.w; sh = l.h;
     });
     // Medición de luminancia (sobre el nivel más pequeño)
-    if (!this.sync) {
+    if (this.syncMeter) {
+      // Modo síncrono (pruebas): lectura directa, bloqueante.
+      const last = this.levels[this.levels.length - 1];
+      bindFBO(gl, this.meterFBO);
+      this.pMeter.use().set('uTex', last.down);
+      drawFullscreen(gl);
+      gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, this._buf);
+      this.syncResult = { logLum: ((this._buf[0] + this._buf[1] / 255) / 255) * 40 - 24, exposure };
+    } else if (!this.sync) {
       const last = this.levels[this.levels.length - 1];
       bindFBO(gl, this.meterFBO);
       this.pMeter.use().set('uTex', last.down);

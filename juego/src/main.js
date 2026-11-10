@@ -16,10 +16,14 @@ async function boot() {
   if (qs.get('N')) q.N = +qs.get('N');
   if (qs.get('M')) q.M = +qs.get('M');
   if (qs.get('scale')) q.scale = +qs.get('scale');
+  q.clouds = { ...q.clouds };
+  if (qs.get('cres')) q.clouds.res = +qs.get('cres');
+  if (qs.get('csteps')) q.clouds.steps = +qs.get('csteps');
   const renderer = new Renderer(gl, q);
   const env = new Environment();
   if (qs.get('t')) env.timeOfDay = +qs.get('t');
   if (qs.get('haze')) env.haze = +qs.get('haze');
+  if (qs.get('cov')) env.clouds.coverage = +qs.get('cov');
   env.update(0);
   const t0 = performance.now();
   await renderer.init([], (f) => { if (statusEl) statusEl.textContent = `Generando el mundo… ${Math.round(f * 100)}%`; });
@@ -63,19 +67,18 @@ async function boot() {
     gl, renderer, env, cam, view, setCam, frame, paused: qs.has('paused'),
     // Renderiza varios frames para estabilizar la exposición (pruebas).
     // Renderiza frames hasta que la exposición automática converge (para pruebas).
-    async settle(maxFrames = 40) {
+    async settle(maxFrames = 12) {
       renderer.instantExposure = true;
-      let stable = 0, lastE = 0, lastReady = renderer.exposureReady;
-      for (let i = 0; i < maxFrames && stable < 3; i++) {
-        frame(0); gl.finish();
-        await new Promise((r) => setTimeout(r, 25));
-        if (renderer.exposureReady !== lastReady) {
-          lastReady = renderer.exposureReady;
-          stable = Math.abs(renderer.exposure / lastE - 1) < 0.02 ? stable + 1 : 0;
-          lastE = renderer.exposure;
-        }
+      renderer.post.syncMeter = true;
+      let lastE = 0;
+      for (let i = 0; i < maxFrames; i++) {
+        frame(0);
+        if (i > 1 && Math.abs(renderer.exposure / lastE - 1) < 0.01) break;
+        lastE = renderer.exposure;
       }
       frame(0);
+      gl.finish();
+      renderer.post.syncMeter = false;
       renderer.instantExposure = false;
     },
   };

@@ -4,6 +4,8 @@ import { GLSL_HEADER, FULLSCREEN_VS, Program, createTexture, createFBO, bindFBO,
 import { GLSL_HASH } from './glslNoise.js';
 import { GLSL_HEIGHT_CODEC, WORLD_SIZE, WORLD_MIN } from './terrainGen.js';
 import { GLSL_ATMO_SCENE, EARTH_RADIUS } from './atmosphere.js';
+import { GLSL_SEA_LEVEL } from './ocean.js';
+import { GLSL_CLOUD_SHADOW } from './clouds.js';
 
 export const NUM_LEVELS = 9;
 
@@ -73,6 +75,8 @@ const FS = `${GLSL_HEADER}
 ${GLSL_HASH}
 ${GLSL_TERRAIN_SAMPLING}
 ${GLSL_ATMO_SCENE}
+${GLSL_SEA_LEVEL}
+${GLSL_CLOUD_SHADOW}
 uniform sampler2D uNoiseTex;
 uniform sampler2D uDetailN;
 uniform vec4 uDebug;
@@ -82,8 +86,9 @@ out vec4 o;
 
 void main() {
   float h = vWorld.y;
-  if (h < -0.8) discard;
   vec2 p = vWorld.xz;
+  float sea = seaLevelAt(p);
+  if (h < sea - 0.03) discard;
   float dist = length(vRel);
   vec4 nt = texture(uNormalTex, terrUV(p));
   vec3 N;
@@ -98,7 +103,7 @@ void main() {
   vec4 n4 = texture(uNoiseTex, p / 6.7);
 
   // ---- pesos de materiales ----
-  float rockW = smoothstep(0.24, 0.46, slope + (n2.r - 0.5) * 0.22 + (n3.a - 0.5) * 0.12);
+  float rockW = smoothstep(0.24, 0.46, slope + (n2.r - 0.5) * 0.22 + (n3.b - 0.5) * 0.12);
   float snowLine = 1720.0 + (n1.r - 0.5) * 500.0;
   float snowW = smoothstep(snowLine - 160.0, snowLine + 120.0, h + (n2.b - 0.5) * 120.0)
               * (1.0 - smoothstep(0.38, 0.66, slope + (n3.r - 0.5) * 0.16));
@@ -111,17 +116,17 @@ void main() {
   float dry = clamp(n1.g * 1.3 - 0.25 + (n2.b - 0.5) * 0.5 + alpine * 0.45, 0.0, 1.0);
   vec3 grass = mix(grassLush, grassDry, dry) * (0.72 + 0.56 * n3.b) * (0.85 + 0.3 * n4.r);
   vec3 soil = vec3(0.135, 0.098, 0.064) * (0.7 + 0.6 * n3.r);
-  grass = mix(grass, soil, smoothstep(0.62, 0.9, n2.a + n3.g * 0.4) * 0.5);
+  grass = mix(grass, soil, smoothstep(0.55, 0.9, n2.b * 0.7 + n3.r * 0.5) * 0.45);
   vec3 scree = vec3(0.21, 0.195, 0.175) * (0.75 + 0.5 * n3.b);
   grass = mix(grass, scree, alpine * smoothstep(0.3, 0.8, n2.g + alpine * 0.5));
   float strata = 0.5 + 0.5 * sin(h * 0.055 + n2.r * 9.0 + n1.b * 14.0);
   vec3 rock = mix(vec3(0.115, 0.108, 0.10), vec3(0.235, 0.215, 0.19), n2.g * 0.6 + strata * 0.4);
-  rock = mix(rock, vec3(0.20, 0.165, 0.125), smoothstep(0.55, 0.8, n1.a) * 0.6);
-  rock *= 0.7 + 0.6 * n3.a * n4.b + 0.2 * n4.g;
+  rock = mix(rock, vec3(0.20, 0.165, 0.125), smoothstep(0.45, 0.8, n1.b) * 0.6);
+  rock *= 0.62 + 0.5 * n3.a + 0.3 * n4.a * n4.b;
   vec3 forestC = mix(vec3(0.016, 0.038, 0.012), vec3(0.040, 0.068, 0.018), n2.b * 0.7 + n1.g * 0.3);
   forestC *= 0.55 + 0.9 * n3.g * n3.g + 0.25 * n4.g;
   vec3 sand = mix(vec3(0.50, 0.43, 0.31), vec3(0.42, 0.37, 0.28), n3.r) * (0.9 + 0.2 * n4.b);
-  float wet = 1.0 - smoothstep(0.1, 0.9, h);
+  float wet = 1.0 - smoothstep(0.05, 0.75, h - sea);
   sand = mix(sand, sand * vec3(0.42, 0.42, 0.45), wet);
   vec3 snow = vec3(0.86, 0.88, 0.92);
 
@@ -146,7 +151,8 @@ void main() {
   vec3 Nd = normalize(N + vec3(dn.x, 0.0, dn.y) * (0.55 + 0.6 * slope));
 
   // ---- iluminación ----
-  float shadow = terrainShadow(p);
+  float cs = cloudShadow(vWorld);
+  float shadow = terrainShadow(p) * cs;
   vec3 sunT = lightTransmittance(h, uSunDir.y);
   float nl = max(dot(Nd, uSunDir), 0.0);
   // El dosel del bosque se autosombrea con sol bajo.
@@ -155,7 +161,7 @@ void main() {
   vec3 moonT = lightTransmittance(h, uMoonDir.y);
   direct += uMoonE * moonT * max(dot(Nd, uMoonDir), 0.0);
   float aoD = ao * (0.8 + 0.2 * mix(1.0, n3.g, forestW));
-  vec3 amb = skyIrradiance(Nd) * aoD;
+  vec3 amb = skyIrradiance(Nd) * aoD * mix(0.6, 1.0, cs);
   // Rebote difuso aproximado del terreno circundante.
   amb += uSunE * sunT * max(uSunDir.y, 0.0) * 0.035 * (1.0 - ao * 0.5) * (1.0 - N.y * 0.6);
   vec3 col = alb / PI * (direct + amb);
@@ -274,14 +280,17 @@ export class Terrain {
       .set('uTerr', d.originX, d.texel, d.N, d.texel * d.N);
   }
 
-  // cam: {pos:[x,y,z], viewProj:Float32Array}; clearance: distancia aproximada al terreno.
-  render(cam, atmosphere, viewport, clearance) {
+  // ctx: contexto del frame; clearance: distancia aproximada al terreno (elige el nivel más fino).
+  render(ctx, clearance) {
+    const { cam, atmosphere, viewport, ocean, env, clouds } = ctx;
     const gl = this.gl, M = this.M, p = this.prog;
     p.use();
     this.bindSampling(p);
     atmosphere.bind(p, viewport);
+    clouds.bindShadow(p, env.primaryLight);
     p.set('uNoiseTex', this.detail.noise).set('uDetailN', this.detail.normal);
     p.set('uViewProj', cam.viewProj).set('uDebug', this.debug);
+    p.set('uSea', ocean.seaUniform(env));
     gl.bindVertexArray(this.grid.vao);
     const first = Math.max(0, Math.min(5, Math.floor(Math.log2(Math.max(clearance, 1) / (125 * this.cell0)))));
     const texel = this.data.texel;

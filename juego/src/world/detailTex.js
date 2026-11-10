@@ -32,10 +32,23 @@ vec2 pworley(vec2 p, float per) {
 }
 // Campos de altura de detalle (0..1)
 float hSoft(vec2 uv) { return pfbm(uv, 6.0, 6) * 0.5 + 0.5; }
+// fBm 'ridged' repetible: aristas a varias escalas (roca fracturada).
+float pridged(vec2 uv, float per, int oct) {
+  float a = 0.5, s = 0.0, w = 1.0;
+  for (int i = 0; i < oct; i++) {
+    float n = 1.0 - abs(pnoise(uv * per + float(i) * 3.1, per) * 1.6);
+    n = n * n * w;
+    w = clamp(n * 1.8, 0.0, 1.0);
+    s += a * n; per *= 2.0; a *= 0.5;
+  }
+  return s;
+}
 float hRock(vec2 uv) {
-  vec2 w = pworley(uv + pfbm(uv, 8.0, 3) * 0.04, 9.0);
-  float cracks = smoothstep(0.0, 0.25, w.y - w.x);
-  return clamp(cracks * 0.6 + pfbm(uv + 0.37, 14.0, 5) * 0.5 + 0.2 + (1.0 - w.x) * 0.25, 0.0, 1.0);
+  // Estratos inclinados + fracturas
+  vec2 q = uv + vec2(pfbm(uv, 4.0, 3), pfbm(uv + 0.31, 4.0, 3)) * 0.06;
+  float r = pridged(q, 5.0, 6);
+  float strata = 0.5 + 0.5 * sin((q.y * 2.0 + q.x * 1.0) * 6.2831853 * 6.0 + pfbm(uv, 6.0, 3) * 5.0);
+  return clamp(r * 0.85 + strata * 0.12 + pfbm(uv + 0.7, 20.0, 3) * 0.12, 0.0, 1.0);
 }
 `;
 
@@ -46,7 +59,7 @@ void main() {
   vec2 w = pworley(vUV, 14.0);
   float g = w.x;                                            // celular (F1)
   float b = pfbm(vUV + 0.5, 24.0, 4) * 0.5 + 0.5;           // grano fino
-  float a = clamp((w.y - w.x) * 1.6, 0.0, 1.0);             // grietas (F2 - F1)
+  float a = clamp(pridged(vUV + 0.21, 6.0, 5) * 1.25, 0.0, 1.0);   // aristas (ridged)
   o = vec4(r, g, b, a);
 }`;
 

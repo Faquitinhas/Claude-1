@@ -23,9 +23,9 @@ export const DEFAULT_TUNE = {
   cell: 4000,      // tamaño de celda de la primera octava (m)
   stripes: 1.7,    // crestas por celda
   octaves: 6,
-  ampRatio: 0.066, // amplitud = ampRatio * longitud de onda
+  ampRatio: 0.082, // amplitud = ampRatio * longitud de onda
   gain: 0.95,      // factor de amplitud por octava (1 = proporcional a la longitud de onda)
-  sharp: 0.36,     // 0 = senoidal, 1 = triangular (crestas y vaguadas afiladas)
+  sharp: 0.45,     // 0 = senoidal, 1 = triangular (crestas y vaguadas afiladas)
   bias: 0.3,       // >0: excava más de lo que levanta
   lodBias: 0.0,
   thermal: 10,     // iteraciones de erosión térmica
@@ -101,8 +101,8 @@ float baseHeight(vec2 pm) {
   float regional = 0.6 + 0.4 * smoothstep(-0.3, 0.3, fbm(pk * 0.07 + 91.0, 3));
   float mEnv = inland * (0.2 + 0.8 * spine) * regional;
   vec2 wr = vec2(fbm(pk * 0.16 + 5.0, 3), fbm(pk * 0.16 + 23.0, 3)) * 1.6;
-  float r = ridged(pk * 0.085 + wr * 0.085 + 3.0, 4, 0.42);
-  h += mEnv * (pow(r, 1.25) * 2500.0 + 80.0);
+  float r = ridged(pk * 0.125 + wr * 0.11 + 3.0, 4, 0.45);
+  h += mEnv * (pow(r, 1.45) * 2900.0 + 60.0);
   // Colinas suaves en las tierras bajas.
   float low = smoothstep(0.0, 0.1, e) * (1.0 - mEnv * 0.85);
   h += low * (fbm(pk * 0.42 + 77.0, 4) * 60.0 + 30.0 * smoothstep(0.0, 0.3, e));

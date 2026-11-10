@@ -4,7 +4,8 @@ import { GLSL_HEADER, FULLSCREEN_VS, Program, drawFullscreen } from '../core/gl.
 import { GLSL_HASH } from './glslNoise.js';
 import { GLSL_ATMO_SCENE } from './atmosphere.js';
 import { GLSL_TERRAIN_SAMPLING } from './terrain.js';
-import { GLSL_OCEAN } from './ocean.js';
+import { GLSL_OCEAN, GLSL_SEA_LEVEL } from './ocean.js';
+import { GLSL_CLOUD_SHADOW } from './clouds.js';
 
 const FS = `${GLSL_HEADER}
 ${GLSL_HASH}
@@ -17,6 +18,8 @@ uniform float uExposure;
 uniform float uPixelAngle;  // radianes por píxel
 uniform mat3 uStarRot;
 uniform float uMoonFrac;
+${GLSL_SEA_LEVEL}
+${GLSL_CLOUD_SHADOW}
 ${GLSL_OCEAN}
 in vec2 vUV;
 out vec4 o;
@@ -101,15 +104,18 @@ export class Sky {
     this.gl = gl;
     this.prog = new Program(gl, FULLSCREEN_VS, FS, 'sky');
   }
-  render(cam, atmosphere, terrain, env, viewport, exposure, ocean) {
+  render(ctx) {
+    const { cam, atmosphere, terrain, env, viewport, exposure, ocean, clouds } = ctx;
     const gl = this.gl, p = this.prog.use();
     atmosphere.bind(p, viewport);
+    clouds.bindShadow(p, env.primaryLight);
     terrain.bindSampling(p);
     p.set('uRay00', cam.rays[0]).set('uRay10', cam.rays[1]).set('uRay01', cam.rays[2]).set('uRay11', cam.rays[3]);
     p.set('uCamPos', cam.pos[0], cam.pos[1], cam.pos[2]).set('uTime', env.time).set('uExposure', exposure);
     p.set('uPixelAngle', (2 * Math.tan(cam.fovY / 2)) / viewport[1]);
     p.set('uStarRot', env.starRot).set('uMoonFrac', env.moonFraction);
-    if (ocean) ocean.bind(p, env);
+    p.set('uNoiseTex', terrain.detail.noise);
+    ocean.bind(p, env);
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
     gl.depthMask(false);
