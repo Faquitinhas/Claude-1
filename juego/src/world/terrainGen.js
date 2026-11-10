@@ -332,7 +332,8 @@ export class TerrainData {
     this.originZ = WORLD_MIN;
     this.tune = { ...DEFAULT_TUNE };
     this.heights = null; // Float32Array N*N
-    this.hfmt = gl.caps.colorFloat && isRenderable(gl, 'rg16f') ? 'rg16f' : 'rgba16f';
+    // RG16F ocupa la mitad, pero solo es destino de render con EXT_color_buffer_float.
+    this.hfmt = !TerrainData.forceRGBA && gl.caps.colorFloat && isRenderable(gl, 'rg16f') ? 'rg16f' : 'rgba16f';
     this.heightTex = createTexture(gl, { width: N, height: N, format: this.hfmt, mips: true, filter: 'linear', wrap: 'clamp' });
     this.normalTex = createTexture(gl, { width: N, height: N, format: 'rgba8', mips: true, filter: 'linear', wrap: 'clamp', aniso: 8 });
     this.maxHeight = 0;

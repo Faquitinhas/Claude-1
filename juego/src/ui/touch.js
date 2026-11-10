@@ -12,11 +12,11 @@ export class TouchControls {
       <div class="thr"><b></b><i></i><span>GASES</span></div>
       <div class="rud"><span><em>◄</em><em>TIMÓN</em><em>►</em></span><i></i></div>
       <div class="stick"><i></i></div>
-      <div class="tb" data-b="flapUp" style="right:calc(204px + var(--sar));bottom:calc(126px + var(--sab))">FLAPS ▲</div>
-      <div class="tb" data-b="flapDn" style="right:calc(204px + var(--sar));bottom:calc(74px + var(--sab))">FLAPS ▼</div>
-      <div class="tb" data-b="brake" style="right:calc(204px + var(--sar));bottom:calc(22px + var(--sab))">FRENO</div>
-      <div class="tb" data-b="park" style="left:calc(94px + var(--sal));bottom:calc(22px + var(--sab))">FRENO EST.</div>
-      <div class="tb" data-b="engine" style="left:calc(94px + var(--sal));bottom:calc(74px + var(--sab))">MOTOR</div>`;
+      <div class="tb" data-b="flapUp" style="right:calc(190px + var(--sar));bottom:calc(120px + var(--sab))">FLAPS ▲</div>
+      <div class="tb" data-b="flapDn" style="right:calc(190px + var(--sar));bottom:calc(68px + var(--sab))">FLAPS ▼</div>
+      <div class="tb" data-b="brake" style="right:calc(190px + var(--sar));bottom:calc(16px + var(--sab))">FRENO</div>
+      <div class="tb" data-b="park" style="left:calc(86px + var(--sal));bottom:calc(16px + var(--sab))">FRENO EST.</div>
+      <div class="tb" data-b="engine" style="left:calc(86px + var(--sal));bottom:calc(68px + var(--sab))">MOTOR</div>`;
     const $ = (s) => root.querySelector(s);
     // ---- palanca ----
     const stick = $('.stick'), knob = stick.querySelector('i');

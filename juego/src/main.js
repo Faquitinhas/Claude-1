@@ -42,6 +42,7 @@ async function boot() {
   if (qs.get('cres')) cloudQ.res = +qs.get('cres');
   if (qs.get('csteps')) cloudQ.steps = +qs.get('csteps');
   const quality = qs.get('q') || store.settings.quality;
+  if (qs.has('rgba')) (await import('./world/terrainGen.js')).TerrainData.forceRGBA = true;   // prueba del formato alternativo
   game = new Game(canvas, { quality, q, cloudQ, hudCanvas: $('hud'), maxDpr: { low: 1.25, medium: 1.5, high: 2, ultra: 2 }[quality] || 1.5 });
   const env = game.env;
   audio = new AudioEngine();
@@ -52,6 +53,8 @@ async function boot() {
   try { localStorage.removeItem('horizonte-boot'); } catch (e) { /* ignorar */ }
   console.log(`init ok, calidad=${quality}, maxH=${game.renderer.terrainData.maxHeight.toFixed(0)}`);
   game.hud.touchUI = isTouch;
+  document.body.classList.toggle('touch', isTouch);
+  game.hud.resize();
   game.baseScale = game.quality.scale;
 
   // ---------- ajustes ----------
@@ -201,6 +204,14 @@ async function boot() {
     else if (fast > resT * 0.9 && sc < game.baseScale) { game.quality.scale = Math.min(game.baseScale, sc + 0.05); game.resize(); }
     resT = 0; slow = 0; fast = 0;
   }
+
+  // Si el navegador descarta el contexto gráfico (memoria, suspensión), avisar en vez de quedar en negro.
+  canvas.addEventListener('webglcontextlost', (e) => {
+    e.preventDefault();
+    game.frozen = true;
+    $('fly').classList.add('hidden'); touch.show(false);
+    shell.error('El navegador ha interrumpido los gráficos (suele pasar por falta de memoria). Recarga la página; si se repite, elige una calidad gráfica menor en Ajustes.');
+  });
 
   handlers.applySettings();
   toMenu();

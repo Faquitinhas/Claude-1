@@ -32,7 +32,8 @@ export class Hud {
     const c = this.canvas, dpr = Math.min(window.devicePixelRatio || 1, 2);
     const w = Math.round(c.clientWidth * dpr), h = Math.round(c.clientHeight * dpr);
     if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
-    this.s = Math.max(0.62, Math.min(1.7, Math.min(w / 1280, h / 720))) * (this.touchUI ? 1.0 : 1.0);
+    // En táctil la referencia es la anchura CSS (los móviles tienen mucha densidad de píxeles).
+    this.s = this.touchUI ? Math.max(0.7, Math.min(1.25, c.clientWidth / 900)) * dpr : Math.max(0.62, Math.min(1.7, Math.min(w / 1280, h / 720)));
   }
 
   message(text, seconds = 4, color = '#ffffff') {
@@ -64,7 +65,7 @@ export class Hud {
     if (this._trailT <= 0 && game.state === 'flying') { this._trailT = 2; this.trail.push([ac.pos[0], ac.pos[2]]); if (this.trail.length > 600) this.trail.shift(); }
 
     // ---- mensajes ----
-    let my = H * 0.20;
+    let my = this.touchUI ? H * 0.47 : H * 0.20;
     for (const m of this.messages) {
       m.t -= dt;
       const a = Math.min(1, m.t * 2);
@@ -99,7 +100,7 @@ export class Hud {
       if (ac.fuel < 10) warn.push(['COMBUSTIBLE BAJO', '#ffb020']);
       if (tel.g > SPEC.gLimitPos || tel.g < SPEC.gLimitNeg) warn.push(['LÍMITE DE CARGA', '#ffb020']);
     }
-    let wy = H * 0.11;
+    let wy = this.touchUI ? H * 0.34 : H * 0.11;
     const blink = Math.sin(this.t * 9) > -0.3;
     for (const [txt, col] of warn) {
       if (col === '#ff4a3d' && !blink) { wy += 44 * s; continue; }
@@ -110,6 +111,8 @@ export class Hud {
       this._text(txt, W / 2, wy, 26, '#fff', 'center', 800);
       wy += 44 * s;
     }
+
+    if (this.touchUI) { this._touchLayout(game, kias, altFt, aglFt, vs); if (this.showMap) this._map(game); return; }
 
     // ---- objetivo de misión ----
     if (this.objective) {
@@ -228,11 +231,75 @@ export class Hud {
     if (this.showMap) this._map(game);
   }
 
+  // Disposición compacta para pantallas táctiles: datos arriba, zona inferior libre para los mandos.
+  _touchLayout(game, kias, altFt, aglFt, vs) {
+    const g = this.g, c = this.canvas, s = this.s, W = c.width, H = c.height;
+    const ac = game.ac, tel = ac.tel, env = game.env;
+    const pad = 8 * s, bh = 62 * s, y0 = pad + (this.safeTop || 0);
+    const sw = 168 * s, aw = 190 * s;
+    // velocidad
+    this._panel(pad, y0, sw, bh, 8);
+    const spCol = tel.stallWarn ? '#ff6a5e' : kias > SPEC.vno ? '#ffcc4d' : '#ffffff';
+    this._text(kias.toFixed(0), pad + 10 * s, y0 + 44 * s, 40, spCol, 'left', 700);
+    g.font = `700 ${Math.round(40 * s)}px ${FONT}`;
+    const nw = g.measureText(kias.toFixed(0)).width;
+    this._text('kt', pad + 14 * s + nw, y0 + 44 * s, 15, '#9fb3c8', 'left', 500);
+    this._text(`${Math.round(ac.engine.rpm / 10) * 10} rpm`, pad + sw - 8 * s, y0 + 22 * s, 13, ac.engine.running ? '#d7e3ee' : '#ff6a5e', 'right', 600);
+    this._text(`flaps ${Math.round(ac.ctl.flaps * 30)}°`, pad + sw - 8 * s, y0 + 40 * s, 13, ac.ctl.flaps > 0.02 ? '#ffe08a' : '#9fb3c8', 'right', 600);
+    if (ac.input.parkBrake) this._text('FRENO EST.', pad + sw - 8 * s, y0 + 56 * s, 11, '#ffb020', 'right', 700);
+    // altitud
+    const ax = W - pad - aw;
+    this._panel(ax, y0, aw, bh, 8);
+    this._text('ft', ax + aw - 10 * s, y0 + 44 * s, 15, '#9fb3c8', 'right', 500);
+    g.font = `500 ${Math.round(15 * s)}px ${FONT}`;
+    const fw = g.measureText('ft').width;
+    this._text(Math.round(altFt / 10) * 10 + '', ax + aw - 14 * s - fw, y0 + 44 * s, 40, '#fff', 'right', 700);
+    const vsr = Math.round(vs / 50) * 50;
+    this._text(`${vsr > 0 ? '▲' : vsr < 0 ? '▼' : '■'} ${Math.abs(vsr)}`, ax + 10 * s, y0 + 22 * s, 13, vsr < -900 ? '#ffb020' : '#d7e3ee', 'left', 600);
+    if (aglFt < 2500) this._text(`suelo ${Math.round(aglFt / 5) * 5}`, ax + 10 * s, y0 + 40 * s, 12, aglFt < 200 && !tel.onGround ? '#ffe08a' : '#9fb3c8', 'left', 500);
+    // brújula
+    const cw = Math.min(380 * s, W - sw - aw - 6 * pad), cx = W / 2, ch = 40 * s;
+    if (cw > 120 * s) {
+      this._panel(cx - cw / 2, y0, cw, ch, 8);
+      g.save(); g.beginPath(); g.rect(cx - cw / 2 + 3, y0, cw - 6, ch); g.clip();
+      const ppd = cw / 100, hd = tel.heading;
+      for (let a = Math.floor((hd - 55) / 5) * 5; a <= hd + 55; a += 5) {
+        const x = cx + (a - hd) * ppd, aa = ((a % 360) + 360) % 360;
+        g.fillStyle = 'rgba(255,255,255,0.7)';
+        g.fillRect(x - 1, y0 + ch - (aa % 10 === 0 ? 10 : 6) * s, 2, (aa % 10 === 0 ? 10 : 6) * s);
+        if (aa % 30 === 0) {
+          const name = { 0: 'N', 90: 'E', 180: 'S', 270: 'O' }[aa] || String(aa / 10).padStart(2, '0');
+          this._text(name, x, y0 + 20 * s, aa % 90 === 0 ? 16 : 13, aa % 90 === 0 ? '#ffd27d' : '#e8eef5', 'center', 700);
+        }
+      }
+      const n = game.nav;
+      let rb = n.brg - hd; while (rb > 180) rb -= 360; while (rb < -180) rb += 360;
+      const bx = cx + Math.max(-48, Math.min(48, rb)) * ppd;
+      g.fillStyle = '#ff5fd6';
+      g.beginPath(); g.moveTo(bx, y0 + ch - 12 * s); g.lineTo(bx - 6 * s, y0 + ch - 1 * s); g.lineTo(bx + 6 * s, y0 + ch - 1 * s); g.closePath(); g.fill();
+      g.restore();
+      g.fillStyle = '#fff'; g.beginPath(); g.moveTo(cx, y0 + ch - 2 * s); g.lineTo(cx - 5 * s, y0 + ch + 6 * s); g.lineTo(cx + 5 * s, y0 + ch + 6 * s); g.closePath(); g.fill();
+      const nm = n.dist / 1852;
+      this._text(`${String(Math.round(hd) % 360).padStart(3, '0')}°  ·  ${n.ident} ${nm < 10 ? nm.toFixed(1) : nm.toFixed(0)} NM`, cx, y0 + ch + 20 * s, 13, '#e8eef5', 'center', 600);
+    }
+    // objetivo
+    if (this.objective) {
+      g.font = `600 ${Math.round(15 * s)}px ${FONT}`;
+      const tw = g.measureText(this.objective).width;
+      const oy = y0 + bh + 10 * s;
+      this._panel(pad, oy, Math.min(tw + 20 * s, W * 0.46), 28 * s, 6);
+      g.save(); g.beginPath(); g.rect(pad, oy, Math.min(tw + 20 * s, W * 0.46), 28 * s); g.clip();
+      this._text(this.objective, pad + 10 * s, oy + 19 * s, 15, '#ffe9a8');
+      g.restore();
+    }
+    void env;
+  }
+
   _map(game) {
     if (!this.mapImage) return;
     const g = this.g, c = this.canvas, s = this.s;
-    const size = Math.min(c.height * 0.62, c.width * 0.5, 620 * s);
-    const x0 = c.width - size - 18 * s, y0 = 70 * s;
+    const size = this.touchUI ? Math.min(c.height * 0.7, c.width * 0.4) : Math.min(c.height * 0.62, c.width * 0.5, 620 * s);
+    const x0 = this.touchUI ? (c.width - size) / 2 : c.width - size - 18 * s, y0 = this.touchUI ? c.height * 0.22 : 70 * s;
     this._panel(x0 - 8 * s, y0 - 8 * s, size + 16 * s, size + 16 * s, 10);
     g.drawImage(this.mapImage, x0, y0, size, size);
     const P = (x, z) => [x0 + ((x - WORLD_MIN) / WORLD_SIZE) * size, y0 + ((z - WORLD_MIN) / WORLD_SIZE) * size];

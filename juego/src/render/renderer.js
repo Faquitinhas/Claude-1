@@ -22,11 +22,11 @@ export const QUALITY = {
   },
   medium: {
     N: 2048, M: 128, scale: 0.8, fxaa: true, clouds: { res: 96, steps: 52, lightSteps: 5, scale: 0.5, shadowRes: 512 },
-    trees: { rings: [[7, 72, 7, 6, 1.0], [14, 112, 5, 4, 1.3], [30, 128, 4, 3, 1.9]] },
+    trees: { rings: [[7, 64, 6, 5, 1.0], [14, 104, 5, 4, 1.3], [30, 120, 4, 3, 1.9]] },
   },
   high: {
     N: 4096, M: 128, scale: 1.0, fxaa: true, clouds: { res: 128, steps: 72, lightSteps: 5, scale: 0.5, shadowRes: 512 },
-    trees: { rings: [[7, 96, 8, 7, 1.0], [14, 128, 6, 5, 1.3], [30, 144, 4, 3, 1.9]] },
+    trees: { rings: [[7, 88, 7, 6, 1.0], [14, 120, 5, 4, 1.3], [30, 136, 4, 3, 1.9]] },
   },
   ultra: {
     N: 4096, M: 256, scale: 1.0, fxaa: true, clouds: { res: 128, steps: 96, lightSteps: 6, scale: 0.5, shadowRes: 1024 },
