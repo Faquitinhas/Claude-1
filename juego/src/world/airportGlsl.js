@@ -2,7 +2,7 @@
 // (umbral, números, eje, bordes, zona de contacto, punto de visada), rodajes y plataforma.
 // Todo es analítico con antialiasing por derivadas: nítido a cualquier distancia.
 import { createTexture, updateTexture } from '../core/gl.js';
-import { AIRPORTS, MAX_RECTS } from './airports.js';
+import { AIRPORTS, MAX_RECTS, MAX_BOXES, airportBuildings } from './airports.js';
 
 const NAP = 4;
 
@@ -132,6 +132,48 @@ vec4 airportSurface(vec2 p, vec4 nMacro, vec4 nFine, vec4 nMicro, out float wetK
 }
 `;
 
+// Sombras analíticas de los edificios (cajas alineadas con la pista) y foco de aterrizaje.
+export const GLSL_AIRPORT_LIGHTING = /* glsl */`
+uniform vec4 uApBox[${NAP * MAX_BOXES}];     // centro along, centro across, semilargo, semiancho
+uniform float uApBoxH[${NAP * MAX_BOXES}];   // altura (0 = sin caja)
+uniform vec4 uSpotPos;   // xyz: posición del foco relativa a la cámara, w: intensidad (0 = apagado)
+uniform vec3 uSpotDir;
+float buildingShadow(vec2 p, vec3 L) {
+  if (L.y <= 0.02) return 1.0;
+  float sh = 1.0;
+  for (int i = 0; i < ${NAP}; i++) {
+    vec4 A = uApA[i], B = uApB[i];
+    vec2 d = p - A.xy;
+    if (B.x <= 0.0 || abs(d.x) > B.x + 500.0 || abs(d.y) > B.x + 500.0) continue;
+    vec3 o = vec3(dot(d, A.zw), dot(d, vec2(-A.w, A.z)), 0.0);
+    vec3 r = vec3(dot(L.xz, A.zw), dot(L.xz, vec2(-A.w, A.z)), L.y);
+    vec3 ir = 1.0 / (abs(r) + 1e-5) * sign(r + 1e-9);
+    for (int k = 0; k < ${MAX_BOXES}; k++) {
+      int idx = i * ${MAX_BOXES} + k;
+      float h = uApBoxH[idx];
+      if (h <= 0.0) continue;
+      vec4 bx = uApBox[idx];
+      vec3 bmin = vec3(bx.xy - bx.zw, -1.0), bmax = vec3(bx.xy + bx.zw, h);
+      vec3 t0 = (bmin - o) * ir, t1 = (bmax - o) * ir;
+      vec3 tn = min(t0, t1), tf = max(t0, t1);
+      float tN = max(max(tn.x, tn.y), tn.z), tF = min(min(tf.x, tf.y), tf.z);
+      if (tF > max(tN, 0.0)) sh = min(sh, 1.0 - smoothstep(0.0, 0.6, tF - max(tN, 0.0)));
+    }
+  }
+  return sh;
+}
+// Iluminancia del faro de aterrizaje sobre un punto (relativo a cámara) con normal N.
+vec3 landingLight(vec3 rel, vec3 N) {
+  if (uSpotPos.w <= 0.0) return vec3(0.0);
+  vec3 v = rel - uSpotPos.xyz;
+  float d2 = max(dot(v, v), 1.0);
+  vec3 l = v * inversesqrt(d2);
+  float c = dot(l, uSpotDir);
+  float cone = smoothstep(0.955, 0.992, c) + 0.06 * smoothstep(0.6, 0.95, c);
+  return vec3(1.0, 0.96, 0.88) * (uSpotPos.w * cone * max(dot(N, -l), 0.0) / d2);
+}
+`;
+
 // Atlas de dígitos (0-9) trazados con segmentos rectos, estilo numeración de pista.
 export function createDigitTexture(gl) {
   const cw = 96, ch = 160;
@@ -152,7 +194,6 @@ export function createDigitTexture(gl) {
     8: [[0.2, 0.5], [0.2, 0.9], [0.8, 0.9], [0.8, 0.1], [0.2, 0.1], [0.2, 0.5], [0.8, 0.5]],
     9: [[0.8, 0.48], [0.2, 0.48], [0.2, 0.9], [0.8, 0.9], [0.8, 0.1], [0.22, 0.1]],
   };
-  g.filter = 'blur(2.5px)';   // borde suave: se umbraliza en el shader (pseudo-SDF)
   for (let d = 0; d < 10; d++) {
     g.beginPath();
     S[d].forEach(([x, y], i) => {
@@ -162,9 +203,27 @@ export function createDigitTexture(gl) {
     g.stroke();
   }
   const img = g.getImageData(0, 0, c.width, c.height);
-  const data = new Uint8Array(c.width * c.height);
+  const Wd = c.width;
+  let src = new Float32Array(Wd * ch), tmp = new Float32Array(Wd * ch);
+  for (let i = 0; i < Wd * ch; i++) src[i] = img.data[i * 4];
+  // Borde suave (se umbraliza en el shader, pseudo-SDF): dos pasadas de desenfoque de caja
+  // separable. Se hace a mano porque ctx.filter no existe en todos los navegadores.
+  const R2 = 3;
+  for (let pass = 0; pass < 2; pass++) {
+    for (let y = 0; y < ch; y++) for (let x = 0; x < Wd; x++) {
+      let s2 = 0, n = 0;
+      for (let k = -R2; k <= R2; k++) { const xx = x + k; if (xx >= 0 && xx < Wd) { s2 += src[y * Wd + xx]; n++; } }
+      tmp[y * Wd + x] = s2 / n;
+    }
+    for (let y = 0; y < ch; y++) for (let x = 0; x < Wd; x++) {
+      let s2 = 0, n = 0;
+      for (let k = -R2; k <= R2; k++) { const yy = y + k; if (yy >= 0 && yy < ch) { s2 += tmp[yy * Wd + x]; n++; } }
+      src[y * Wd + x] = s2 / n;
+    }
+  }
+  const data = new Uint8Array(Wd * ch);
   // voltear verticalmente: v = 0 es la base del dígito
-  for (let y = 0; y < ch; y++) for (let x = 0; x < c.width; x++) data[(ch - 1 - y) * c.width + x] = img.data[(y * c.width + x) * 4];
+  for (let y = 0; y < ch; y++) for (let x = 0; x < Wd; x++) data[(ch - 1 - y) * Wd + x] = Math.round(src[y * Wd + x]);
   const tex = createTexture(gl, { width: c.width, height: ch, format: 'r8', mips: true, wrap: 'clamp', aniso: 8 });
   updateTexture(gl, tex, data);
   return tex;
@@ -182,8 +241,16 @@ export function setAirportUniforms(prog, digitTex) {
       Nn.set([+a.numbers[0][0], +a.numbers[0][1], +a.numbers[1][0], +a.numbers[1][1]], i * 4);
       a.paved.slice(0, MAX_RECTS).forEach((r, k) => { R.set(r.slice(0, 4), (i * MAX_RECTS + k) * 4); T[i * MAX_RECTS + k] = r[4]; });
     });
-    _cache = { A, B, Nn, R, T };
+    const BX = new Float32Array(NAP * MAX_BOXES * 4), BH = new Float32Array(NAP * MAX_BOXES);
+    AIRPORTS.slice(0, NAP).forEach((a, i) => {
+      airportBuildings(a).filter((b) => b.kind !== 'pole').slice(0, MAX_BOXES).forEach((b, k) => {
+        BX.set([b.al, b.ac, b.ha, b.hc], (i * MAX_BOXES + k) * 4);
+        BH[i * MAX_BOXES + k] = b.h + (b.kind === 'hangar' ? b.ha * 0.2 : b.kind === 'tower' ? 3.6 : 0);
+      });
+    });
+    _cache = { A, B, Nn, R, T, BX, BH };
   }
   prog.set('uApA', _cache.A).set('uApB', _cache.B).set('uApNum', _cache.Nn).set('uApRect', _cache.R).set('uApRectT', _cache.T);
+  prog.set('uApBox', _cache.BX).set('uApBoxH', _cache.BH);
   prog.set('uDigitTex', digitTex);
 }

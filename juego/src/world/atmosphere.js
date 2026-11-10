@@ -269,11 +269,13 @@ void aerialPerspective(vec2 suv, float dist, out vec3 inscat, out vec3 trans) {
   inscat = apSample(uAPScat, suv, s).rgb * nearK;
   trans = mix(vec3(1.0), apSample(uAPTrans, suv, s).rgb, nearK);
 }
+#ifndef VERTEX_STAGE
 vec3 applyAP(vec3 color, vec3 relPos) {
   vec3 ins, tr;
   aerialPerspective(gl_FragCoord.xy / uViewport, length(relPos), ins, tr);
   return color * tr + ins;
 }
+#endif
 vec2 octEncode(vec3 n) {
   n /= (abs(n.x) + abs(n.y) + abs(n.z));
   vec2 p = n.xz;

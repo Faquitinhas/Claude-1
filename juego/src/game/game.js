@@ -4,7 +4,7 @@ import { DEG } from '../core/math.js';
 import { Renderer, QUALITY } from '../render/renderer.js';
 import { createCamera, updateCamera } from '../render/camera.js';
 import { Environment } from './env.js';
-import { Aircraft, KT, FT } from '../aircraft/fdm.js';
+import { Aircraft, KT, FT, qrot } from '../aircraft/fdm.js';
 import { WorldPhysics } from './worldPhysics.js';
 import { Input } from './input.js';
 import { CameraController } from './cameraCtl.js';
@@ -145,6 +145,14 @@ export class Game {
     cam.near = camCtl.mode === 'cockpit' ? Math.min(Math.max(renderer.clear * 0.2, 0.5), 30) : Math.min(Math.max(renderer.clear * 0.2, 0.4), ext && camCtl.mode !== 'free' ? 1.2 : 40);
     updateCamera(cam);
     renderer.aircraft.visible = camCtl.mode !== 'free' || this.showAircraftInFree;
+    // faro de aterrizaje: ilumina el terreno por delante del avión
+    const sp = renderer.spot;
+    if (renderer.aircraft.lightsOn && ac.engine.rpm > 300 && !ac.crashed) {
+      const o = qrot(ac.q, [0, -0.3, -2.0]);
+      sp.pos = [ac.pos[0] + o[0], ac.pos[1] + o[1], ac.pos[2] + o[2]];
+      sp.dir = qrot(ac.q, [0, -0.07, -0.9975]);
+      sp.intensity = 1.3;
+    } else sp.intensity = 0;
     renderer.render(cam, env, dt, {
       shadow: (ctx) => renderer.aircraft.renderShadow(ctx, ac.pos, ac.q),
       near: (ctx) => this.drawNear(ctx),

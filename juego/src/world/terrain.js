@@ -7,7 +7,7 @@ import { GLSL_ATMO_SCENE, EARTH_RADIUS } from './atmosphere.js';
 import { GLSL_SEA_LEVEL } from './ocean.js';
 import { GLSL_CLOUD_SHADOW } from './clouds.js';
 import { GLSL_AC_SHADOW } from '../aircraft/shadowGlsl.js';
-import { GLSL_AIRPORT, createDigitTexture, setAirportUniforms } from './airportGlsl.js';
+import { GLSL_AIRPORT, GLSL_AIRPORT_LIGHTING, createDigitTexture, setAirportUniforms } from './airportGlsl.js';
 
 export const NUM_LEVELS = 9;
 
@@ -84,6 +84,7 @@ uniform sampler2D uNoiseTex;
 uniform sampler2D uDetailN;
 uniform vec4 uDebug;
 ${GLSL_AIRPORT}
+${GLSL_AIRPORT_LIGHTING}
 in vec3 vRel;
 in vec3 vWorld;
 out vec4 o;
@@ -127,8 +128,11 @@ void main() {
   vec3 rock = mix(vec3(0.115, 0.108, 0.10), vec3(0.235, 0.215, 0.19), n2.g * 0.6 + strata * 0.4);
   rock = mix(rock, vec3(0.20, 0.165, 0.125), smoothstep(0.45, 0.8, n1.b) * 0.6);
   rock *= 0.62 + 0.5 * n3.a + 0.3 * n4.a * n4.b;
-  vec3 forestC = mix(vec3(0.016, 0.038, 0.012), vec3(0.040, 0.068, 0.018), n2.b * 0.7 + n1.g * 0.3);
+  vec3 forestC = mix(vec3(0.017, 0.040, 0.013), vec3(0.038, 0.066, 0.019), n2.b * 0.7 + n1.g * 0.3);
   forestC *= 0.55 + 0.9 * n3.g * n3.g + 0.25 * n4.g;
+  // Cerca de la cámara hay árboles de verdad: el suelo pasa a ser sotobosque en sombra.
+  float treeNear = uDebug.y > 0.0 ? 1.0 - smoothstep(uDebug.y * 0.35, uDebug.y * 0.9, dist) : 0.0;
+  forestC = mix(forestC, vec3(0.030, 0.034, 0.018) * (0.7 + 0.6 * n4.r), treeNear * 0.85);
   vec3 sand = mix(vec3(0.50, 0.43, 0.31), vec3(0.42, 0.37, 0.28), n3.r) * (0.9 + 0.2 * n4.b);
   float wet = 1.0 - smoothstep(0.05, 0.75, h - sea);
   sand = mix(sand, sand * vec3(0.42, 0.42, 0.45), wet);
@@ -162,7 +166,7 @@ void main() {
 
   // ---- iluminación ----
   float cs = cloudShadow(vWorld);
-  float shadow = terrainShadow(p) * cs * aircraftShadow(vRel, 0.0002);
+  float shadow = terrainShadow(p) * cs * aircraftShadow(vRel, 0.0002) * buildingShadow(p, uSunDir);
   vec3 sunT = lightTransmittance(h, uSunDir.y);
   float nl = max(dot(Nd, uSunDir), 0.0);
   // El dosel del bosque se autosombrea con sol bajo.
@@ -170,6 +174,7 @@ void main() {
   vec3 direct = uSunE * sunT * (nl * shadow * canopyShade);
   vec3 moonT = lightTransmittance(h, uMoonDir.y);
   direct += uMoonE * moonT * max(dot(Nd, uMoonDir), 0.0);
+  direct += landingLight(vRel, Nd);
   float aoD = ao * (0.8 + 0.2 * mix(1.0, n3.g, forestW));
   vec3 amb = skyIrradiance(Nd) * aoD * mix(0.6, 1.0, cs);
   // Rebote difuso aproximado del terreno circundante.
@@ -295,15 +300,21 @@ export class Terrain {
   render(ctx, clearance) {
     const { cam, atmosphere, viewport, ocean, env, clouds, aircraft } = ctx;
     const gl = this.gl, M = this.M, p = this.prog;
+    gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LESS); gl.depthMask(true);
+    gl.enable(gl.CULL_FACE); gl.cullFace(gl.BACK); gl.disable(gl.BLEND);
     p.use();
     this.bindSampling(p);
     atmosphere.bind(p, viewport);
     clouds.bindShadow(p, env.primaryLight);
     aircraft.bindShadow(p);
     p.set('uNoiseTex', this.detail.noise).set('uDetailN', this.detail.normal);
+    this.debug[1] = this.treeRange || 0;
     p.set('uViewProj', cam.viewProj).set('uDebug', this.debug);
     p.set('uSea', ocean.seaUniform(env));
     setAirportUniforms(p, this.digitTex);
+    const sp = ctx.spot;
+    if (sp && sp.intensity > 0) p.set('uSpotPos', sp.pos[0], sp.pos[1], sp.pos[2], sp.intensity).set('uSpotDir', sp.dir);
+    else p.set('uSpotPos', 0, 0, 0, 0);
     gl.bindVertexArray(this.grid.vao);
     const first = Math.max(0, Math.min(5, Math.floor(Math.log2(Math.max(clearance, 1) / (125 * this.cell0)))));
     const texel = this.data.texel;

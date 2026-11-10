@@ -77,3 +77,30 @@ export function nearestAirport(x, z) {
   for (const a of AIRPORTS) { const d = Math.hypot(x - a.x, z - a.z); if (d < bd) { bd = d; best = a; } }
   return { airport: best, dist: bd };
 }
+
+export const MAX_BOXES = 6;   // cajas de sombra por aeródromo
+
+// Disposición de edificios por aeródromo, en coordenadas locales (along, across).
+// Se calcula una sola vez y la usan la malla, las sombras y las luces.
+export function airportBuildings(a) {
+  if (a._buildings) return a._buildings;
+  const ap = a.apron, s = Math.sign(ap.across);
+  const edge = Math.abs(ap.across) + ap.halfAcross;       // borde exterior de la plataforma
+  const B = [];
+  if (a.main) {
+    B.push({ kind: 'terminal', al: -40, ac: s * (edge + 13), ha: 26, hc: 8, h: 6.5 });
+    B.push({ kind: 'tower', al: ap.halfAlong * 0.55, ac: s * (edge + 16), ha: 3.6, hc: 3.6, h: 19 });
+    B.push({ kind: 'hangar', al: -122, ac: s * (edge + 20), ha: 15, hc: 16, h: 8.5 });
+    B.push({ kind: 'hangar', al: -160, ac: s * (edge + 20), ha: 15, hc: 16, h: 8.5 });
+    B.push({ kind: 'hangar', al: 140, ac: s * (edge + 20), ha: 17, hc: 16, h: 9.5 });
+    B.push({ kind: 'tank', al: 30, ac: s * (edge + 34), ha: 4, hc: 4, h: 5 });
+  } else {
+    B.push({ kind: 'hangar', al: -22, ac: s * (edge + 13), ha: 10, hc: 10, h: 5.8 });
+    B.push({ kind: 'hut', al: 14, ac: s * (edge + 8), ha: 4.5, hc: 3.2, h: 3.0 });
+    B.push({ kind: 'tank', al: 34, ac: s * (edge + 8), ha: 2.2, hc: 2.2, h: 2.8 });
+    B.push({ kind: 'pole', al: ap.along + ap.halfAlong * 0.55, ac: s * (edge + 16), ha: 0.25, hc: 0.25, h: 8.5 });
+  }
+  a._buildings = B;
+  return B;
+}
+

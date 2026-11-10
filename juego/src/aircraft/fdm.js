@@ -620,6 +620,19 @@ export class Aircraft {
       }
     }
 
+    // ---- agua: tras un amerizaje el avión flota y se frena en seco ----
+    if (underY <= 0.0 && pos[1] < 0.9) {
+      const vw = qrotInv(q, v);
+      const sub = clamp((0.9 - pos[1]) / 0.9, 0, 1.5);
+      const kd = 2600 * sub;
+      const fb = qrotInv(q, [0, (this.mass * G0 * 1.25) * Math.min(sub, 1) - 4200 * v[1] * sub, 0]);
+      Fx += -kd * vw[0] * Math.abs(vw[0]) * 0.2 - kd * vw[0] + fb[0];
+      Fy += -kd * vw[1] + fb[1];
+      Fz += -kd * vw[2] * Math.abs(vw[2]) * 0.2 - kd * vw[2] + fb[2];
+      Mx -= w[0] * 9000 * sub; My -= w[1] * 9000 * sub; Mz -= w[2] * 9000 * sub;
+      onGround = true;
+    }
+
     // ---- integración ----
     const m = this.mass;
     const aw = qrot(q, [Fx / m, Fy / m, Fz / m]);

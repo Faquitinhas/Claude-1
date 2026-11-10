@@ -10,12 +10,28 @@ import { Ocean } from '../world/ocean.js';
 import { Clouds } from '../world/clouds.js';
 import { PostFX } from './post.js';
 import { AircraftRenderer } from '../aircraft/render.js';
+import { AirportLights } from '../world/lights.js';
+import { AirportObjects } from '../world/objects.js';
+import { Trees } from '../world/trees.js';
 
+// Anillos de árboles: [celda (m), instancias por lado, lados, anillos del sólido, escala]
 export const QUALITY = {
-  low: { N: 2048, M: 64, scale: 0.6, fxaa: true, clouds: { res: 64, steps: 36, lightSteps: 4, scale: 0.34, shadowRes: 256 } },
-  medium: { N: 2048, M: 128, scale: 0.8, fxaa: true, clouds: { res: 96, steps: 52, lightSteps: 5, scale: 0.5, shadowRes: 512 } },
-  high: { N: 4096, M: 128, scale: 1.0, fxaa: true, clouds: { res: 128, steps: 72, lightSteps: 5, scale: 0.5, shadowRes: 512 } },
-  ultra: { N: 4096, M: 256, scale: 1.0, fxaa: true, clouds: { res: 128, steps: 96, lightSteps: 6, scale: 0.5, shadowRes: 1024 } },
+  low: {
+    N: 2048, M: 64, scale: 0.6, fxaa: true, clouds: { res: 64, steps: 36, lightSteps: 4, scale: 0.34, shadowRes: 256 },
+    trees: { rings: [[14, 88, 5, 4, 1.3], [30, 104, 4, 3, 1.9]] },
+  },
+  medium: {
+    N: 2048, M: 128, scale: 0.8, fxaa: true, clouds: { res: 96, steps: 52, lightSteps: 5, scale: 0.5, shadowRes: 512 },
+    trees: { rings: [[7, 72, 7, 6, 1.0], [14, 112, 5, 4, 1.3], [30, 128, 4, 3, 1.9]] },
+  },
+  high: {
+    N: 4096, M: 128, scale: 1.0, fxaa: true, clouds: { res: 128, steps: 72, lightSteps: 5, scale: 0.5, shadowRes: 512 },
+    trees: { rings: [[7, 96, 8, 7, 1.0], [14, 128, 6, 5, 1.3], [30, 144, 4, 3, 1.9]] },
+  },
+  ultra: {
+    N: 4096, M: 256, scale: 1.0, fxaa: true, clouds: { res: 128, steps: 96, lightSteps: 6, scale: 0.5, shadowRes: 1024 },
+    trees: { rings: [[6, 128, 9, 8, 1.0], [12, 160, 6, 5, 1.25], [26, 176, 5, 4, 1.8]] },
+  },
 };
 
 export class Renderer {
@@ -41,6 +57,11 @@ export class Renderer {
     this.sky = new Sky(gl);
     this.post = new PostFX(gl);
     this.aircraft = new AircraftRenderer(gl);
+    this.lights = new AirportLights(gl, this.terrainData);
+    this.objects = new AirportObjects(gl, this.terrainData);
+    this.trees = new Trees(gl, this.q.trees);
+    this.terrain.treeRange = this.trees.rings.length ? this.trees.rings[this.trees.rings.length - 1].G * 0.5 * this.trees.rings[this.trees.rings.length - 1].cell : 0;
+    this.spot = { pos: [0, 0, 0], dir: [0, 0, -1], intensity: 0 };
     this.post.settings.fxaa = this.q.fxaa;
     onProgress(1);
   }
@@ -100,7 +121,12 @@ export class Renderer {
     this.atmosphere.update(cam.pos[1], env.sunDir, env.moonDir, sunE, moonE, cam.rays);
 
     const vp = [post.w, post.h];
-    const ctx = { cam, env, atmosphere: this.atmosphere, terrain: this.terrain, ocean: this.ocean, clouds: this.clouds, aircraft: this.aircraft, viewport: vp, exposure: ex, dt };
+    const sp = this.spot;
+    const ctx = {
+      cam, env, atmosphere: this.atmosphere, terrain: this.terrain, ocean: this.ocean, clouds: this.clouds, aircraft: this.aircraft,
+      viewport: vp, exposure: ex, dt,
+      spot: { pos: [sp.pos[0] - cam.pos[0], sp.pos[1] - cam.pos[1], sp.pos[2] - cam.pos[2]], dir: sp.dir, intensity: sp.intensity * ex },
+    };
     this.ctx = ctx;
     this.clouds.update(ctx);
     if (hooks.shadow) hooks.shadow(ctx); else this.aircraft.shadowOn = false;
@@ -113,9 +139,12 @@ export class Renderer {
     gl.enable(gl.CULL_FACE); gl.cullFace(gl.BACK);
     gl.disable(gl.BLEND);
     this.terrain.render(ctx, this.clear);
+    this.objects.render(ctx);
+    this.trees.render(ctx, this.clear);
     if (hooks.opaque) hooks.opaque(ctx);
     gl.disable(gl.CULL_FACE);
     this.sky.render(ctx);
+    this.lights.render(ctx);
     this.clouds.render(ctx, post.sceneColorFBO, post.sceneDepth);
     if (hooks.near) {
       bindFBO(gl, post.sceneFBO);

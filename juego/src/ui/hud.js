@@ -5,6 +5,10 @@ import { WORLD_SIZE, WORLD_MIN } from '../world/terrainGen.js';
 
 const RAD = Math.PI / 180;
 const FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+// Navegadores sin roundRect (Safari antiguo): rectángulo simple.
+if (typeof CanvasRenderingContext2D !== 'undefined' && !CanvasRenderingContext2D.prototype.roundRect) {
+  CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h) { this.rect(x, y, w, h); };
+}
 
 export class Hud {
   constructor(canvas) {
