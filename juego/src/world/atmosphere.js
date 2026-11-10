@@ -389,7 +389,7 @@ export class Atmosphere {
     p = this.pIrr.use();
     this.bind(p, [IRR_RES, IRR_RES]);
     if (p.has('uIrrMap')) p.set('uIrrMap', this.msLUT); // evita realimentación con el destino
-    p.set('uGroundAlbedo', 0.10, 0.11, 0.09);
+    p.set('uGroundAlbedo', 0.15, 0.17, 0.12);
     drawFullscreen(gl);
     gl.depthMask(true);
   }

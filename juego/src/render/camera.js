@@ -7,13 +7,29 @@ export function createCamera() {
     view: m4.create(), proj: m4.create(), viewProj: m4.create(),
     right: [1, 0, 0], up: [0, 1, 0], fwd: [0, 0, -1],
     rays: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]],
+    useBasis: false,
   };
 }
 
+// Orienta la cámara mirando en 'fwd' con la vertical aproximada 'upHint'.
+export function lookDir(cam, fwd, upHint = [0, 1, 0]) {
+  const fl = Math.hypot(fwd[0], fwd[1], fwd[2]) || 1;
+  const f = [fwd[0] / fl, fwd[1] / fl, fwd[2] / fl];
+  let r = [f[1] * upHint[2] - f[2] * upHint[1], f[2] * upHint[0] - f[0] * upHint[2], f[0] * upHint[1] - f[1] * upHint[0]];
+  let rl = Math.hypot(r[0], r[1], r[2]);
+  if (rl < 1e-5) { r = [1, 0, 0]; rl = 1; }
+  r = [r[0] / rl, r[1] / rl, r[2] / rl];
+  const u = [r[1] * f[2] - r[2] * f[1], r[2] * f[0] - r[0] * f[2], r[0] * f[1] - r[1] * f[0]];
+  cam.fwd = f; cam.right = r; cam.up = u;
+  cam.useBasis = true;
+}
+
 export function updateCamera(cam) {
-  quat.rotate(cam.right, cam.q, [1, 0, 0]);
-  quat.rotate(cam.up, cam.q, [0, 1, 0]);
-  quat.rotate(cam.fwd, cam.q, [0, 0, -1]);
+  if (!cam.useBasis) {
+    quat.rotate(cam.right, cam.q, [1, 0, 0]);
+    quat.rotate(cam.up, cam.q, [0, 1, 0]);
+    quat.rotate(cam.fwd, cam.q, [0, 0, -1]);
+  }
   const back = [-cam.fwd[0], -cam.fwd[1], -cam.fwd[2]];
   m4.viewFromBasis(cam.view, cam.right, cam.up, back);
   m4.perspective(cam.proj, cam.fovY, cam.aspect, cam.near, cam.far);
@@ -26,7 +42,7 @@ export function updateCamera(cam) {
   return cam;
 }
 
-// Proyecta un punto del mundo a coordenadas de pantalla normalizadas [0,1]; devuelve null si queda detrás.
+// Proyecta un punto del mundo a coordenadas de pantalla normalizadas [0,1]; null si queda detrás.
 export function projectPoint(cam, p) {
   const r = [p[0] - cam.pos[0], p[1] - cam.pos[1], p[2] - cam.pos[2]];
   const m = cam.viewProj;

@@ -39,7 +39,7 @@ export const SPEC = {
   fuelCapacity: 120,          // kg utilizables (~43 gal)
   vne: 163, vno: 129, va: 99, vfe: 85, vs0: 41, vs1: 48, vr: 55, vx: 62, vy: 74, // nudos
   gLimitPos: 3.8, gLimitNeg: -1.52,
-  eye: [-0.24, 0.42, -0.35],   // posición del ojo del piloto (cuerpo)
+  eye: [-0.24, 0.43, -0.10],   // posición del ojo del piloto (cuerpo)
 };
 
 function rotZ(v, a) { const c = Math.cos(a), s = Math.sin(a); return [v[0] * c - v[1] * s, v[0] * s + v[1] * c, v[2]]; }

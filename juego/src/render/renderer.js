@@ -9,6 +9,7 @@ import { Sky } from '../world/sky.js';
 import { Ocean } from '../world/ocean.js';
 import { Clouds } from '../world/clouds.js';
 import { PostFX } from './post.js';
+import { AircraftRenderer } from '../aircraft/render.js';
 
 export const QUALITY = {
   low: { N: 2048, M: 64, scale: 0.6, fxaa: true, clouds: { res: 64, steps: 36, lightSteps: 4, scale: 0.34, shadowRes: 256 } },
@@ -39,6 +40,7 @@ export class Renderer {
     this.ocean = new Ocean(gl);
     this.sky = new Sky(gl);
     this.post = new PostFX(gl);
+    this.aircraft = new AircraftRenderer(gl);
     this.post.settings.fxaa = this.q.fxaa;
     onProgress(1);
   }
@@ -86,7 +88,8 @@ export class Renderer {
     }
   }
 
-  render(cam, env, dt, drawScene) {
+  // hooks: { shadow(ctx), opaque(ctx), near(ctx) } para dibujar objetos del juego.
+  render(cam, env, dt, hooks = {}) {
     const gl = this.gl, post = this.post;
     this._updateExposure(env, dt);
     const ex = this.exposure;
@@ -97,9 +100,10 @@ export class Renderer {
     this.atmosphere.update(cam.pos[1], env.sunDir, env.moonDir, sunE, moonE, cam.rays);
 
     const vp = [post.w, post.h];
-    const ctx = { cam, env, atmosphere: this.atmosphere, terrain: this.terrain, ocean: this.ocean, clouds: this.clouds, viewport: vp, exposure: ex, dt };
+    const ctx = { cam, env, atmosphere: this.atmosphere, terrain: this.terrain, ocean: this.ocean, clouds: this.clouds, aircraft: this.aircraft, viewport: vp, exposure: ex, dt };
     this.ctx = ctx;
     this.clouds.update(ctx);
+    if (hooks.shadow) hooks.shadow(ctx); else this.aircraft.shadowOn = false;
     bindFBO(gl, post.sceneFBO);
     gl.depthMask(true);
     gl.clearColor(0, 0, 0, 1);
@@ -109,10 +113,14 @@ export class Renderer {
     gl.enable(gl.CULL_FACE); gl.cullFace(gl.BACK);
     gl.disable(gl.BLEND);
     this.terrain.render(ctx, this.clear);
-    if (drawScene) drawScene(ctx);
+    if (hooks.opaque) hooks.opaque(ctx);
     gl.disable(gl.CULL_FACE);
     this.sky.render(ctx);
     this.clouds.render(ctx, post.sceneColorFBO, post.sceneDepth);
+    if (hooks.near) {
+      bindFBO(gl, post.sceneFBO);
+      hooks.near(ctx);
+    }
     const night = clamp((Math.log10(ex) - 2.2) / 2.5, 0, 1) * 0.85;
     post.render(this.outW, this.outH, ex, env.time, night);
   }

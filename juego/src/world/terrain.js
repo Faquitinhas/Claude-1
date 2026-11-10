@@ -6,6 +6,8 @@ import { GLSL_HEIGHT_CODEC, WORLD_SIZE, WORLD_MIN } from './terrainGen.js';
 import { GLSL_ATMO_SCENE, EARTH_RADIUS } from './atmosphere.js';
 import { GLSL_SEA_LEVEL } from './ocean.js';
 import { GLSL_CLOUD_SHADOW } from './clouds.js';
+import { GLSL_AC_SHADOW } from '../aircraft/shadowGlsl.js';
+import { GLSL_AIRPORT, createDigitTexture, setAirportUniforms } from './airportGlsl.js';
 
 export const NUM_LEVELS = 9;
 
@@ -77,9 +79,11 @@ ${GLSL_TERRAIN_SAMPLING}
 ${GLSL_ATMO_SCENE}
 ${GLSL_SEA_LEVEL}
 ${GLSL_CLOUD_SHADOW}
+${GLSL_AC_SHADOW}
 uniform sampler2D uNoiseTex;
 uniform sampler2D uDetailN;
 uniform vec4 uDebug;
+${GLSL_AIRPORT}
 in vec3 vRel;
 in vec3 vWorld;
 out vec4 o;
@@ -135,6 +139,11 @@ void main() {
   alb = mix(alb, rock, rockW);
   alb = mix(alb, sand, sandW);
   alb = mix(alb, snow, snowW);
+  // ---- pavimento de aeródromos ----
+  float apWet;
+  vec4 apS = airportSurface(p, n2, n3, n4, apWet);
+  float paved = apS.a;
+  alb = mix(alb, apS.rgb, paved);
 
   // ---- normal de detalle ----
   vec4 d2 = texture(uDetailN, p / 197.0) * 2.0 - 1.0;
@@ -148,15 +157,16 @@ void main() {
   dn = mix(dn, canopy, forestW);
   dn *= 1.0 - snowW * 0.7;
   dn *= 1.0 - sandW * 0.6;
+  dn = mix(dn, d4.xy * 0.05 * nearK, paved);
   vec3 Nd = normalize(N + vec3(dn.x, 0.0, dn.y) * (0.55 + 0.6 * slope));
 
   // ---- iluminación ----
   float cs = cloudShadow(vWorld);
-  float shadow = terrainShadow(p) * cs;
+  float shadow = terrainShadow(p) * cs * aircraftShadow(vRel, 0.0002);
   vec3 sunT = lightTransmittance(h, uSunDir.y);
   float nl = max(dot(Nd, uSunDir), 0.0);
   // El dosel del bosque se autosombrea con sol bajo.
-  float canopyShade = mix(1.0, 0.55 + 0.45 * smoothstep(0.0, 0.7, uSunDir.y), forestW);
+  float canopyShade = mix(1.0, 0.55 + 0.45 * smoothstep(0.0, 0.7, uSunDir.y), forestW * (1.0 - paved));
   vec3 direct = uSunE * sunT * (nl * shadow * canopyShade);
   vec3 moonT = lightTransmittance(h, uMoonDir.y);
   direct += uMoonE * moonT * max(dot(Nd, uMoonDir), 0.0);
@@ -256,6 +266,7 @@ export class Terrain {
     this.shadowDir = [0, 0, 0];
     this.debug = [0, 0, 0, 0];
     this.trisDrawn = 0;
+    this.digitTex = createDigitTexture(gl);
   }
 
   // Rehornea la sombra del relieve si la luz se movió lo suficiente.
@@ -282,15 +293,17 @@ export class Terrain {
 
   // ctx: contexto del frame; clearance: distancia aproximada al terreno (elige el nivel más fino).
   render(ctx, clearance) {
-    const { cam, atmosphere, viewport, ocean, env, clouds } = ctx;
+    const { cam, atmosphere, viewport, ocean, env, clouds, aircraft } = ctx;
     const gl = this.gl, M = this.M, p = this.prog;
     p.use();
     this.bindSampling(p);
     atmosphere.bind(p, viewport);
     clouds.bindShadow(p, env.primaryLight);
+    aircraft.bindShadow(p);
     p.set('uNoiseTex', this.detail.noise).set('uDetailN', this.detail.normal);
     p.set('uViewProj', cam.viewProj).set('uDebug', this.debug);
     p.set('uSea', ocean.seaUniform(env));
+    setAirportUniforms(p, this.digitTex);
     gl.bindVertexArray(this.grid.vao);
     const first = Math.max(0, Math.min(5, Math.floor(Math.log2(Math.max(clearance, 1) / (125 * this.cell0)))));
     const texel = this.data.texel;

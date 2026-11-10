@@ -1,88 +1,69 @@
-// Arranque (versión de desarrollo): inicializa el render y expone window.SIM para pruebas.
-import { initGL } from './core/gl.js';
-import { quat, DEG } from './core/math.js';
-import { Renderer, QUALITY } from './render/renderer.js';
-import { createCamera, updateCamera } from './render/camera.js';
-import { Environment } from './game/env.js';
+// Arranque de Horizonte.
+import { Game, KT, FT } from './game/game.js';
+import { DEG } from './core/math.js';
 
 const qs = new URLSearchParams(location.search);
 const canvas = document.getElementById('gl');
 const statusEl = document.getElementById('status');
+const dbgEl = document.getElementById('dbg');
 
 async function boot() {
-  const gl = initGL(canvas);
-  if (!gl) throw new Error('Tu navegador no soporta WebGL 2.');
-  const q = { ...QUALITY[qs.get('q') || 'high'] };
+  const q = {}, cloudQ = {};
   if (qs.get('N')) q.N = +qs.get('N');
   if (qs.get('M')) q.M = +qs.get('M');
   if (qs.get('scale')) q.scale = +qs.get('scale');
-  q.clouds = { ...q.clouds };
-  if (qs.get('cres')) q.clouds.res = +qs.get('cres');
-  if (qs.get('csteps')) q.clouds.steps = +qs.get('csteps');
-  const renderer = new Renderer(gl, q);
-  const env = new Environment();
+  if (qs.get('cres')) cloudQ.res = +qs.get('cres');
+  if (qs.get('csteps')) cloudQ.steps = +qs.get('csteps');
+  const game = new Game(canvas, { quality: qs.get('q') || 'high', q, cloudQ, hudCanvas: document.getElementById('hud') });
+  const env = game.env;
   if (qs.get('t')) env.timeOfDay = +qs.get('t');
   if (qs.get('haze')) env.haze = +qs.get('haze');
   if (qs.get('cov')) env.clouds.coverage = +qs.get('cov');
   env.update(0);
   const t0 = performance.now();
-  await renderer.init([], (f) => { if (statusEl) statusEl.textContent = `Generando el mundo… ${Math.round(f * 100)}%`; });
-  console.log(`init ${(performance.now() - t0).toFixed(0)} ms, maxH=${renderer.terrainData.maxHeight.toFixed(0)}`);
+  await game.init((f) => { if (statusEl) statusEl.textContent = `Generando el mundo… ${Math.round(f * 100)}%`; });
+  console.log(`init ${(performance.now() - t0).toFixed(0)} ms, maxH=${game.renderer.terrainData.maxHeight.toFixed(0)}`);
   if (statusEl) statusEl.style.display = 'none';
 
-  const cam = createCamera();
-  const view = { yaw: 0, pitch: 0 };
-  const setCam = (x, y, z, yawDeg, pitchDeg, fovDeg) => {
-    cam.pos = [x, y, z]; view.yaw = yawDeg; view.pitch = pitchDeg;
-    if (fovDeg) cam.fovY = fovDeg * DEG;
-  };
-  if (qs.get('cam')) setCam(...qs.get('cam').split(',').map(Number));
-  else setCam(-3000, 1500, 14000, 0, -8);
+  game.placeAircraft({ airport: qs.get('ap') || 'HZPA', end: +(qs.get('end') || 0) });
+  game.state = 'flying';
+  game.frozen = qs.has('paused');
+  if (dbgEl) game.on('frame', () => { dbgEl.textContent = qs.has('fps') ? `${game.fps.toFixed(0)} fps` : ''; });
+  game.start();
 
-  const resize = () => {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const w = Math.round(canvas.clientWidth * dpr), h = Math.round(canvas.clientHeight * dpr);
-    if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
-    renderer.resize(w, h);
-    cam.aspect = w / h;
-  };
-  resize();
-  window.addEventListener('resize', resize);
-
-  let last = performance.now();
-  const frame = (dt = 1 / 60) => {
-    env.update(dt);
-    quat.fromHPR(cam.q, view.yaw * DEG, view.pitch * DEG, 0);
-    renderer.clear = renderer.clearance(cam.pos);
-    cam.near = Math.min(Math.max(renderer.clear * 0.2, 0.5), 40);
-    updateCamera(cam);
-    renderer.render(cam, env, dt, null);
-  };
-  const loop = (now) => {
-    const dt = Math.min((now - last) / 1000, 0.1); last = now;
-    if (!window.SIM.paused) frame(dt);
-    requestAnimationFrame(loop);
-  };
+  // API de depuración/pruebas
+  const r = game.renderer;
   window.SIM = {
-    gl, renderer, env, cam, view, setCam, frame, paused: qs.has('paused'),
-    // Renderiza varios frames para estabilizar la exposición (pruebas).
+    game, gl: game.gl, renderer: r, env, cam: game.cam, ac: game.ac, camCtl: game.camCtl, KT, FT,
+    setCam(x, y, z, yaw, pitch, fov) {
+      game.camCtl.mode = 'free';
+      game.camCtl.free = { pos: [x, y, z], yaw, pitch, fov: fov || 55 };
+    },
+    frame(dt = 1 / 60) { game.step(dt); },
     // Renderiza frames hasta que la exposición automática converge (para pruebas).
     async settle(maxFrames = 12) {
-      renderer.instantExposure = true;
-      renderer.post.syncMeter = true;
+      r.instantExposure = true;
+      r.post.syncMeter = true;
       let lastE = 0;
+      const p = game.paused; game.paused = true;
       for (let i = 0; i < maxFrames; i++) {
-        frame(0);
-        if (i > 1 && Math.abs(renderer.exposure / lastE - 1) < 0.01) break;
-        lastE = renderer.exposure;
+        game.step(0);
+        if (i > 1 && Math.abs(r.exposure / lastE - 1) < 0.01) break;
+        lastE = r.exposure;
       }
-      frame(0);
-      gl.finish();
-      renderer.post.syncMeter = false;
-      renderer.instantExposure = false;
+      game.step(0);
+      game.gl.finish();
+      game.paused = p;
+      r.post.syncMeter = false;
+      r.instantExposure = false;
+    },
+    // Avanza la simulación sin renderizar (rápido).
+    simulate(seconds, ctrl) {
+      const dt = 1 / 120;
+      for (let t = 0; t < seconds; t += dt) { if (ctrl) ctrl(game.ac, dt, t); game.ac.update(dt, game.world); }
+      game.ac.events.length = 0;
     },
   };
-  requestAnimationFrame(loop);
   window.__ready = true;
 }
 
