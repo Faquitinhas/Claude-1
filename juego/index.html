@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Horizonte — Simulador de vuelo</title>
+<meta name="theme-color" content="#0b1016">
+<style>
+html,body{margin:0;height:100%;background:#0b1016;color:#dfe7ee;font:15px/1.4 system-ui,sans-serif;overflow:hidden}
+#gl{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+#status{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center}
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div id="status">Cargando…</div>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
