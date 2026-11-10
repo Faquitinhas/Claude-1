@@ -255,6 +255,7 @@ export class Aircraft {
     this.t = 0;
     this.crashed = false;
     this.crashReason = '';
+    this.noDamage = false;       // ayuda: sin daños estructurales
     this.damage = { gear: false, prop: false, wing: false, overstress: 0 };
     this.events = [];            // eventos discretos (toma de contacto, etc.)
     this.tel = {
@@ -294,6 +295,7 @@ export class Aircraft {
     this.engine.omega = (this.engine.rpm * Math.PI) / 30;
     this.crashed = false; this.crashReason = '';
     this.damage = { gear: false, prop: false, wing: false, overstress: 0 };
+    this._gearReported = false;
     this.gust = [0, 0, 0]; this.gustRot = [0, 0, 0]; this.downwash = 0;
     for (const g of this.gear) { g.comp = 0; g.load = 0; g.onGround = false; g.spin = 0; }
     this.tel.maxG = 1; this.tel.minG = 1;
@@ -521,7 +523,7 @@ export class Aircraft {
         }
         g.onGround = true; g.comp = pen; g.load = Fn;
         onGround = true; wheelLoad += Fn;
-        if (!collapsed && (Fn > g.maxLoad || -vnrm > 4.2)) {
+        if (!collapsed && !this.noDamage && (Fn > g.maxLoad || -vnrm > 4.2)) {
           this.damage.gear = true;
           this.events.push({ type: 'gearCollapse', wheel: g.name, t: this.t });
         }
@@ -589,14 +591,16 @@ export class Aircraft {
         const cvx = v[0] + wv[0], cvy = v[1] + wv[1], cvz = v[2] + wv[2];
         const vnrm = cvx * nx + cvy * ny + cvz * nz;
         const speed = Math.hypot(cvx, cvy, cvz);
-        if (hp.kind === 'prop' && !this.damage.prop && eng.rpm > 100) {
+        if (hp.kind === 'prop' && !this.damage.prop && eng.rpm > 100 && !this.noDamage) {
           this.damage.prop = true;
           this.events.push({ type: 'propStrike', t: this.t });
         }
         if (!this.crashed && hp.kind !== 'prop') {
-          const hard = (hp.kind === 'tail') ? (-vnrm > 2.5) : (speed > 7 || -vnrm > 2.0);
+          // El patín de cola aguanta un roce en la rotación; el resto de la célula, no.
+          const hard = (hp.kind === 'tail') ? (-vnrm > 5.0) : (speed > 7 || -vnrm > 2.0);
           if (hard) this._crash(`Impacto: ${hp.name}`);
           else if (hp.kind === 'wing') this.damage.wing = true;
+          else if (hp.kind === 'tail' && this.t - (this._tailT || -10) > 3) { this._tailT = this.t; this.events.push({ type: 'tailStrike', t: this.t }); }
         }
         let Fn = Math.min(160000 * pen - 7000 * vnrm, 250000);
         if (Fn < 0) Fn = 0;
@@ -680,6 +684,7 @@ export class Aircraft {
 
   _crash(reason) {
     if (this.crashed) return;
+    if (this.noDamage && reason !== 'Amerizaje') return;
     this.crashed = true;
     this.crashReason = reason;
     this.engine.failed = true;

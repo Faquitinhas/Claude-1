@@ -4,20 +4,28 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <title>Horizonte — Simulador de vuelo</title>
+<meta name="description" content="Simulador de vuelo 3D en el navegador: física de vuelo real, atmósfera, nubes volumétricas y una isla entera por explorar.">
 <meta name="theme-color" content="#0b1016">
-<style>
-html,body{margin:0;height:100%;background:#0b1016;color:#dfe7ee;font:15px/1.4 system-ui,sans-serif;overflow:hidden}
-#gl{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
-#hud{position:fixed;inset:0;width:100%;height:100%;display:block;pointer-events:none}
-#status{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center}
-#dbg{position:fixed;left:8px;top:6px;font:12px/1.3 ui-monospace,monospace;color:#fff;text-shadow:0 1px 2px #000;pointer-events:none;white-space:pre}
-</style>
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 <canvas id="gl"></canvas>
 <canvas id="hud"></canvas>
-<div id="status">Cargando…</div>
+<div id="touch"></div>
+<div id="hint" class="hidden"></div>
+<div id="fly" class="hidden">
+  <button data-fly="camera">Vista</button>
+  <button data-fly="map">Mapa</button>
+  <button data-fly="pause">Pausa</button>
+</div>
+<div id="ui" class="solid"><div class="load"><h1 class="logo">HORIZONTE</h1><p class="tag">Simulador de vuelo</p><div class="bar"><i></i></div><p>Cargando…</p></div></div>
+<div id="rotate"><div><b>Gira el dispositivo</b><br><span style="color:#9fb0c2">Horizonte se juega en horizontal.</span></div></div>
 <div id="dbg"></div>
+<noscript><p style="position:fixed;inset:0;display:grid;place-items:center">Horizonte necesita JavaScript.</p></noscript>
 <script type="module" src="src/main.js"></script>
 </body>
 </html>

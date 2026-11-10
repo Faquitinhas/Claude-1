@@ -27,6 +27,8 @@ export class Input {
     this.enabled = true;
     this._padPrev = [];
     this._starter = 0;
+    this._gndHdg = null;
+    this._gndInt = 0;
     this._bind();
   }
 
@@ -86,6 +88,7 @@ export class Input {
     this.trim = ac.input.trim;
     this.parkBrake = ac.input.parkBrake;
     this.stick = [0, 0]; this.yoke = [0, 0]; this.rudderKey = 0;
+    this._gndHdg = null; this._gndInt = 0;
   }
 
   update(dt, ac) {
@@ -112,14 +115,16 @@ export class Input {
     // ---- ejes por teclado ----
     const tr = (down('ArrowRight') ? 1 : 0) - (down('ArrowLeft') ? 1 : 0);
     const tp = (down('ArrowDown') ? 1 : 0) - (down('ArrowUp') ? 1 : 0);
-    const ramp = (v, t, dtt) => {
-      const rate = t === 0 ? 5.0 : (Math.sign(t) !== Math.sign(v) && v !== 0 ? 6.0 : 2.4);
+    // El teclado es todo o nada: la deflexión crece poco a poco (más despacio en cabeceo) y
+    // vuelve sola al centro, para poder hacer correcciones finas con toques cortos.
+    const ramp = (v, t, dtt, up) => {
+      const rate = t === 0 ? 4.5 : (Math.sign(t) !== Math.sign(v) && v !== 0 ? 5.5 : up);
       return v + clamp(t - v, -rate * dtt, rate * dtt);
     };
-    this.stick[0] = ramp(this.stick[0], tr, dt);
-    this.stick[1] = ramp(this.stick[1], tp, dt);
+    this.stick[0] = ramp(this.stick[0], tr, dt, 2.2);
+    this.stick[1] = ramp(this.stick[1], tp, dt, 1.25);
     const ty = (down('KeyD', 'KeyE') && !0 ? 1 : 0) - (down('KeyA', 'KeyQ') ? 1 : 0);
-    this.rudderKey = ramp(this.rudderKey, (down('KeyD') ? 1 : 0) - (down('KeyA') ? 1 : 0), dt);
+    this.rudderKey = ramp(this.rudderKey, (down('KeyD') ? 1 : 0) - (down('KeyA') ? 1 : 0), dt, 2.4);
     void ty;
     if (down('KeyW', 'PageUp', 'Equal', 'NumpadAdd')) this.throttle = Math.min(1, this.throttle + dt * 0.55);
     if (down('KeyS', 'PageDown', 'Minus', 'NumpadSubtract')) this.throttle = Math.max(0, this.throttle - dt * 0.55);
@@ -147,13 +152,20 @@ export class Input {
     if (this.assist.autoRudder && Math.abs(yaw) < 0.05) {
       const tel = ac.tel;
       if (tel.onGround) {
-        // en tierra el alabeo dirige la rueda de morro; se amortigua la guiñada
+        // En tierra el alabeo dirige la rueda de morro. Sin entrada, la ayuda mantiene el rumbo
+        // (contrarresta el par motor y la estela de la hélice, que tiran del morro a la izquierda).
         const gs = tel.groundSpeed;
-        yaw = clamp(roll * (gs < 20 ? 1 : 20 / gs) - (-ac.omega[1]) * 0.25 * clamp(gs / 10, 0, 1), -1, 1);
+        if (Math.abs(roll) > 0.06 || this._gndHdg === null || gs < 1.5) { this._gndHdg = tel.heading; this._gndInt = 0; }
+        let err = this._gndHdg - tel.heading;
+        err = ((err + 540) % 360) - 180;
+        this._gndInt = clamp(this._gndInt + err * dt * 0.05, -0.4, 0.4);
+        const hold = Math.abs(roll) > 0.06 ? 0 : err * 0.09 + this._gndInt;
+        yaw = clamp(roll * (gs < 20 ? 1 : 20 / gs) + hold + ac.omega[1] * 0.7 * clamp(gs / 8, 0, 1), -1, 1);
       } else {
+        this._gndHdg = null;
         yaw = clamp(tel.beta * 3.2 + ac.omega[1] * 0.35 + roll * 0.18, -1, 1);
       }
-    }
+    } else this._gndHdg = null;
     inp.roll = roll; inp.pitch = pitch; inp.yaw = yaw;
     inp.throttle = this.throttle;
     inp.flaps = FLAP_NOTCHES[this.flapNotch];

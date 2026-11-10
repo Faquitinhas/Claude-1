@@ -100,13 +100,24 @@ export class Game {
   }
 
   step(dt) {
+    this.update(dt);
+    this.render(dt);
+  }
+
+  // Lógica: entrada, física, cámara y avisos (sin dibujar).
+  update(dt) {
     const { ac, env, input, cam, camCtl, renderer } = this;
     this.time += dt;
-    env.update(dt);
-    input.update(dt, ac);
+    env.update(this.paused ? 0 : dt);
+    input.enabled = this.state === 'flying' && !this.paused;
+    if (this.state === 'flying') input.update(dt, ac); else { input.pressed.clear(); }
     for (const a of input.actions) this.handleAction(a);
     input.actions.length = 0;
-    if (!this.paused && this.state === 'flying') {
+    // velocidad de la cámara (para el efecto Doppler del sonido)
+    const cp = this.cam.pos;
+    if (this._camPrev && dt > 0) this.camVel = [(cp[0] - this._camPrev[0]) / dt, (cp[1] - this._camPrev[1]) / dt, (cp[2] - this._camPrev[2]) / dt];
+    this._camPrev = [cp[0], cp[1], cp[2]];
+    if (!this.paused && (this.state === 'flying' || this.state === 'menu')) {
       ac.update(dt, this.world);
       for (const e of ac.events) this.emit('acEvent', e);
       ac.events.length = 0;
@@ -114,6 +125,12 @@ export class Game {
     renderer.aircraft.update(ac, this.paused ? 0 : dt);
     this.updateNav();
     camCtl.update(cam, ac, dt, renderer.terrainData);
+    this.updateGpws(dt);
+    this.emit('frame', dt);
+  }
+
+  render(dt) {
+    const { ac, env, cam, camCtl, renderer } = this;
     // El panel solo se redibuja (30 Hz) cuando se ve desde la cabina.
     this._panelT -= dt;
     if (camCtl.mode === 'cockpit' && (this._panelT <= 0 || dt === 0)) {
@@ -132,9 +149,7 @@ export class Game {
       shadow: (ctx) => renderer.aircraft.renderShadow(ctx, ac.pos, ac.q),
       near: (ctx) => this.drawNear(ctx),
     });
-    this.updateGpws(dt);
     if (this.hud) this.hud.draw(this, dt);
-    this.emit('frame', dt);
   }
 
   // Aviso de proximidad al terreno: predice la trayectoria unos segundos por delante.
