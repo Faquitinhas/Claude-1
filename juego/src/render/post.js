@@ -71,6 +71,7 @@ const FS_TONEMAP = `${GLSL_HEADER}
 uniform sampler2D uScene;
 uniform sampler2D uBloom;
 uniform vec4 uParams;   // x: intensidad bloom, y: viñeta, z: noche (0..1), w: tiempo
+uniform vec4 uSun;      // xy: Sol en pantalla (uv), z: intensidad, w: aspecto
 uniform vec4 uParams2;  // x: operador (0 ACES, 1 AgX), y: saturación, z: contraste, w: 1/niveles de bloom
 in vec2 vUV; out vec4 o;
 
@@ -118,6 +119,31 @@ void main() {
   vec3 c = textureLod(uScene, vUV, 0.0).rgb;
   vec3 bl = textureLod(uBloom, vUV, 0.0).rgb;
   c = mix(c, bl * uParams2.w, uParams.x);
+  // Destello del Sol en la lente: velo, raya horizontal y reflejos fantasma. La visibilidad
+  // del disco se estima con el brillo del bloom en su posición (lo tapan nubes y relieve).
+  if (uSun.z > 0.0) {
+    vec3 sb = textureLod(uBloom, clamp(uSun.xy, 0.0, 1.0), 0.0).rgb * uParams2.w;
+    float vis = smoothstep(1.5, 9.0, dot(sb, vec3(0.3333))) * uSun.z;
+    if (vis > 0.002) {
+      vec2 d = (vUV - uSun.xy) * vec2(uSun.w, 1.0);
+      float r = length(d);
+      vec3 tint = normalize(sb + 1e-4) * 1.7;
+      float veil = 0.10 * exp(-r * 5.0) + 0.05 / (1.0 + r * r * 90.0);
+      float streak = 0.10 * exp(-abs(d.y) * 70.0) * exp(-abs(d.x) * 2.6);
+      vec3 fl = tint * (veil + streak);
+      vec2 ax = (vec2(0.5) - uSun.xy) * vec2(uSun.w, 1.0);
+      vec2 pc = (vUV - uSun.xy) * vec2(uSun.w, 1.0);
+      const vec4 GK = vec4(0.55, 1.25, 1.6, 2.1);
+      const vec4 GR = vec4(0.035, 0.07, 0.022, 0.11);
+      for (int i = 0; i < 4; i++) {
+        float gd = length(pc - ax * GK[i]) / GR[i];
+        float g = smoothstep(1.0, 0.75, gd) * (0.35 + 0.65 * smoothstep(0.4, 1.0, gd));
+        vec3 gc = i == 0 ? vec3(0.5, 0.8, 1.0) : i == 1 ? vec3(1.0, 0.7, 0.4) : i == 2 ? vec3(0.6, 1.0, 0.7) : vec3(0.8, 0.6, 1.0);
+        fl += gc * g * 0.016;
+      }
+      c += fl * vis;
+    }
+  }
   // Visión nocturna: la escena muy oscura pierde color y vira al azul.
   if (uParams.z > 0.0) {
     float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
@@ -339,6 +365,7 @@ export class PostFX {
     // Tonemap -> LDR
     bindFBO(gl, this.ldrFBO);
     this.pTone.use().set('uScene', this.sceneColor).set('uBloom', prev)
+      .set('uSun', this.sun || [0.5, 0.5, 0, 1])
       .set('uParams', s.bloom, s.vignette, night, time % 100)
       .set('uParams2', s.operator, s.saturation, s.contrast, 1 / Math.max(1, n - 1));
     drawFullscreen(gl);

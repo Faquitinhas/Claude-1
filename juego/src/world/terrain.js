@@ -153,6 +153,10 @@ void main() {
   vec4 apS = airportSurface(p, n2, n3, n4, apWet);
   float paved = apS.a;
   alb = mix(alb, apS.rgb * mix(1.0, 0.78 + 0.44 * n5.r, nearD), paved);
+  // suelo mojado: más oscuro y brillante; en el pavimento se forman charcos
+  float wetS = uDebug.z * (1.0 - snowW);
+  float puddle = wetS * paved * smoothstep(0.42, 0.62, n3.r * 0.55 + n2.g * 0.5);
+  alb *= mix(1.0, 0.62, wetS * (1.0 - forestW * 0.6));
 
   // ---- normal de detalle ----
   vec4 d2 = texture(uDetailN, p / 197.0) * 2.0 - 1.0;
@@ -185,6 +189,20 @@ void main() {
   // Rebote difuso aproximado del terreno circundante.
   amb += uSunE * sunT * max(uSunDir.y, 0.0) * 0.035 * (1.0 - ao * 0.5) * (1.0 - N.y * 0.6);
   vec3 col = alb / PI * (direct + amb);
+  // ---- brillo especular: asfalto y hormigón rasantes, y todo el suelo cuando llueve ----
+  float gloss = max(paved * (0.22 + 0.78 * wetS), wetS * 0.3 * (1.0 - forestW));
+  if (gloss > 0.01) {
+    vec3 V = normalize(-vRel);
+    vec3 Ns = normalize(mix(Nd, N, 0.6 + 0.4 * puddle));
+    float nv = max(dot(Ns, V), 0.0);
+    float F = (0.03 + 0.97 * pow(1.0 - nv, 5.0)) * gloss;
+    vec3 R = reflect(-V, Ns);
+    vec3 refl = skyRadianceSoft(normalize(vec3(R.x, max(R.y, 0.0) + 0.03, R.z))) * mix(0.45, 1.0, puddle) * mix(0.7, 1.0, cs);
+    vec3 Hh = normalize(uSunDir + V);
+    float shin = mix(40.0, 600.0, max(puddle, wetS * 0.5));
+    float sp = pow(max(dot(Ns, Hh), 0.0), shin) * (shin + 8.0) / (8.0 * PI);
+    col = col * (1.0 - F) + refl * F + uSunE * sunT * shadow * nl * sp * F;
+  }
   if (uDebug.x > 0.5) col = vec3(0.18) / PI * (direct + amb);
   col = applyAP(col, vRel);
   o = vec4(col, 1.0);

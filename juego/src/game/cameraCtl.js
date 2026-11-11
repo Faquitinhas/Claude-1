@@ -66,7 +66,7 @@ export class CameraController {
       this.vt = (this.vt || 0) + dt;
       const rpmK = Math.min(ac.engine.rpm / 2700, 1) * 0.0011;
       const rollK = ac.tel.onGround ? Math.min(ac.tel.groundSpeed / 30, 1) * (ac.gear[1].surface === 'asphalt' ? 0.0016 : 0.006) : 0;
-      const buff = ac.tel.stall > 0.9 && !ac.tel.onGround ? 0.004 : 0;
+      const buff = (ac.tel.buffet || 0) * 0.0045;
       const vb = rpmK + rollK + buff;
       const sx = Math.sin(this.vt * 97) * Math.sin(this.vt * 31.7) * vb, sy = Math.sin(this.vt * 113 + 1.3) * Math.sin(this.vt * 27.1) * vb * 1.4;
       const eye = qrot(ac.q, [e[0] + this.headOff[0] + sx, e[1] + this.headOff[1] + sy, e[2] + this.headOff[2]]);

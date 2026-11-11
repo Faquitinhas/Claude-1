@@ -11,6 +11,7 @@ export class Environment {
     this.time = 0;           // tiempo transcurrido (s), para animaciones
     this.haze = 3.0;         // escala de aerosoles (1 = aire muy limpio)
     this.wind = { dir: 250, speed: 4 }; // de dónde viene (grados) y m/s
+    this.rain = 0;           // intensidad de lluvia (0..1)
     this.clouds = { coverage: 0.42, base: 1500, top: 3600 };
     this.sunE0 = [1.0, 0.98, 0.95];
     this.sunDir = [0, 1, 0];

@@ -14,6 +14,7 @@ import { AirportLights } from '../world/lights.js';
 import { AirportObjects } from '../world/objects.js';
 import { Trees } from '../world/trees.js';
 import { Particles } from './particles.js';
+import { Rain } from './rain.js';
 
 // Anillos de árboles: [celda (m), instancias por lado, lados, anillos del sólido, escala]
 export const QUALITY = {
@@ -62,6 +63,7 @@ export class Renderer {
     this.objects = new AirportObjects(gl, this.terrainData);
     this.trees = new Trees(gl, this.q.trees);
     this.particles = new Particles(gl);
+    this.rain = new Rain(gl);
     this.terrain.treeRange = this.trees.rings.length ? this.trees.rings[this.trees.rings.length - 1].G * 0.5 * this.trees.rings[this.trees.rings.length - 1].cell : 0;
     this.spot = { pos: [0, 0, 0], dir: [0, 0, -1], intensity: 0 };
     this.post.settings.fxaa = this.q.fxaa;
@@ -120,6 +122,7 @@ export class Renderer {
     this.atmosphere.params.mie = env.haze;
     if (this._haze !== env.haze) { this.atmosphere.dirty = true; this._haze = env.haze; }
     this.terrain.updateShadow(env.primaryLight);
+    this.terrain.debug[2] = env.rain > 0 ? Math.min(1, 0.5 + env.rain) : 0;   // suelo mojado
     this.atmosphere.update(cam.pos[1], env.sunDir, env.moonDir, sunE, moonE, cam.rays);
 
     const vp = [post.w, post.h];
@@ -150,8 +153,17 @@ export class Renderer {
     this.clouds.render(ctx, post.sceneColorFBO, post.sceneDepth);
     bindFBO(gl, post.sceneFBO);
     this.particles.render(ctx);
+    this.rain.render(ctx);
     if (hooks.near) hooks.near(ctx);
     const night = clamp((Math.log10(ex) - 2.2) / 2.5, 0, 1) * 0.85;
+    // Posición del Sol en pantalla para el destello de la lente.
+    const sd = env.sunDir, m = cam.viewProj;
+    const cw = m[3] * sd[0] + m[7] * sd[1] + m[11] * sd[2];
+    if (cw > 1e-4 && sd[1] > -0.03) {
+      const sx = (m[0] * sd[0] + m[4] * sd[1] + m[8] * sd[2]) / cw, sy = (m[1] * sd[0] + m[5] * sd[1] + m[9] * sd[2]) / cw;
+      const edge = clamp(1.6 - Math.max(Math.abs(sx), Math.abs(sy)), 0, 1);
+      post.sun = [sx * 0.5 + 0.5, sy * 0.5 + 0.5, edge * clamp(sd[1] * 12 + 0.4, 0, 1), post.w / post.h];
+    } else post.sun = [0.5, 0.5, 0, 1];
     post.render(this.outW, this.outH, ex, env.time, night);
   }
 }

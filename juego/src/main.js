@@ -76,6 +76,7 @@ async function boot() {
   const applyEnv = (e) => {
     env.timeOfDay = e.time; env.clouds.coverage = e.coverage; env.haze = e.haze;
     env.wind = { ...e.wind }; env.turbulenceScale = e.turbulence ?? 1;
+    env.rain = e.rain || 0; game.ac.wet = env.rain > 0 ? Math.min(1, 0.5 + env.rain) : 0;
     env.update(0);
     game.renderer.exposureReady = 0;
   };
@@ -92,7 +93,7 @@ async function boot() {
   };
   handlers.preview = (f) => {
     if (!f) return;
-    applyEnv({ time: f.time, coverage: f.sky, haze: f.vis, wind: { dir: 70, speed: f.wind } });
+    applyEnv({ time: f.time, coverage: f.sky, haze: f.sky > 0.9 ? Math.max(f.vis, 8) : f.vis, rain: f.sky > 0.9 ? 0.8 : 0, wind: { dir: 70, speed: f.wind } });
     const ap = AIRPORTS.find((a) => a.id === f.airport);
     if (ap && game.nav.airport !== ap) game.placeAircraft({ airport: f.airport, end: f.end });
   };

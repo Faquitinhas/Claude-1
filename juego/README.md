@@ -45,7 +45,7 @@ suave (↓). Ascendé a unos 75 nudos.
 ### Modos
 
 - **Volar ahora / Misiones:** primer vuelo guiado, aterrizaje, circuito de tráfico, viento
-  cruzado, pista de montaña, travesía al volcán, motor parado y aproximación nocturna. Los
+  cruzado, aterrizaje con lluvia, pista de montaña, travesía al volcán, motor parado y aproximación nocturna. Los
   aterrizajes se puntúan (suavidad, eje, punto de contacto, alineación, velocidad).
 - **Vuelo libre:** elegís aeródromo, pista, hora, nubes, viento y visibilidad.
 
@@ -57,8 +57,9 @@ propio ángulo de ataque con curvas válidas en ±180°, así que la pérdida, l
 barrena, la guiñada adversa y el efecto suelo salen solos de la física. Hélice de paso fijo
 con curvas de tracción y potencia, motor de pistón, estela de la hélice sobre la cola, par
 motor y factor P (hay que pisar pedal derecho al despegar, salvo que uses la ayuda de timón),
-tren triciclo con amortiguadores y neumáticos, viento con capa límite, ascendencias de ladera
-y turbulencia. Cifras de referencia: 123 nudos de velocidad máxima, pérdida a 52 nudos (45
+tren triciclo con amortiguadores y neumáticos, viento con capa límite, ascendencias de ladera,
+térmicas que derivan con el viento, bataneo antes de la pérdida, turbulencia y pista mojada
+con menos agarre cuando llueve. Cifras de referencia: 123 nudos de velocidad máxima, pérdida a 52 nudos (45
 con flaps), planeo 9:1.
 
 **Mundo.** El relieve se esculpe en la GPU al cargar: forma base, erosión por octavas que
@@ -69,7 +70,8 @@ máscara de bosque. Se dibuja con *geometry clipmaps*.
 dispersión múltiple y perspectiva aérea), Sol y Luna con sus posiciones reales para la hora,
 estrellas, exposición automática y render HDR. Nubes volumétricas con sombra sobre el
 terreno, océano con olas filtradas por distancia y brillo solar, bosques instanciados,
-luces de pista fotométricas y PAPI que cambia de color según tu senda real.
+luces de pista fotométricas y PAPI que cambia de color según tu senda real. Lluvia con suelo
+mojado y reflectante, y destello del Sol en la lente.
 
 **Cabina y sonido.** Tablero con los seis instrumentos básicos, tacómetro y GPS; motor,
 hélice (con efecto Doppler), viento, ruedas y avisos sintetizados en tiempo real.

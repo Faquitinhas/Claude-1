@@ -335,7 +335,10 @@ export class Aircraft {
 
     // ---- viento y turbulencia ----
     if (world && world.wind) world.wind(pos, this.wind, this);
-    const sig = this.turbulence;
+    // bataneo: el flujo desprendido del ala sacude el avión antes y durante la pérdida
+    const buf = this.tel.onGround ? 0 : clamp((this.tel.stall - 0.14) / 0.4, 0, 1) * clamp(vAir / 28, 0, 1.4);
+    this.tel.buffet = buf;
+    const sig = this.turbulence + buf * 1.3;
     if (sig > 0) {
       const L = 220, Vt = Math.max(vAir, 15);
       const kf = (Vt / L) * dt, kn = sig * Math.sqrt((2 * Vt * dt) / L);
@@ -551,12 +554,13 @@ export class Aircraft {
           brake = clamp(brakeBase * (1 - relief) + (g.side < 0 ? inp.brakeL : inp.brakeR), 0, 1);
         }
         if (collapsed) brake = 1;
-        const muLong = (collapsed ? 0.55 : st.rr + brake * st.muBrake);
+        const wetK = (gout.surface === 'asphalt' || gout.surface === 'grass') ? 1 - 0.38 * (this.wet || 0) : 1;   // pista mojada
+        const muLong = (collapsed ? 0.55 : st.rr + brake * st.muBrake * wetK);
         let flong = -muLong * Fn * clamp(vlong / 0.3, -1, 1);
         // fuerza lateral: rigidez de deriva saturada; a baja velocidad, amortiguamiento viscoso
         let flat;
         const avl = Math.abs(vlong);
-        const muLat = collapsed ? 0.6 : st.mu;
+        const muLat = collapsed ? 0.6 : st.mu * (0.55 + 0.45 * wetK);
         if (avl > 2.5) {
           const slip = Math.atan2(vlat, avl);
           flat = -muLat * Fn * Math.sin(1.35 * Math.atan(9.5 * slip));

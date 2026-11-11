@@ -53,6 +53,14 @@ export const MISSIONS = [
     tips: ['Apunta el morro hacia el viento para no desviarte', 'Justo antes de tocar, alinea con el timón y baja el ala del lado del viento'],
   },
   {
+    id: 'lluvia', title: 'Aterrizaje con lluvia', level: 3,
+    desc: 'Final a la pista 07 bajo la lluvia, con poca visibilidad y la pista mojada: frena menos y resbala más. Toca pronto y frena con suavidad.',
+    env: { time: 15.5, coverage: 0.95, wind: { dir: 65, speed: 4 }, haze: 9, rain: 0.85, turbulence: 1 },
+    start: { airport: 'HZPA', end: 0, approach: 3.5, speed: 70, flaps: 2 / 3, throttle: 0.38 },
+    landing: { airport: 'HZPA' },
+    tips: ['Busca las luces de la pista entre la lluvia', 'Con la pista mojada la frenada se alarga: no llegues largo ni rápido'],
+  },
+  {
     id: 'montana', title: 'Pista de montaña', level: 4,
     desc: 'Valle Alto: 720 metros de pista a 2.850 pies, entre cumbres, con la luz del atardecer. Sin margen para llegar largo.',
     env: { time: 18.1, coverage: 0.3, wind: { dir: 70, speed: 2.5 }, haze: 3 },

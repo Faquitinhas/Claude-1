@@ -7,7 +7,7 @@ const stars = (n, big = false) => `<span class="stars${big ? ' big' : ''}">${'�
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 const TIMES = [['Amanecer', 6.4], ['Mañana', 9.5], ['Mediodía', 13], ['Tarde', 16.8], ['Atardecer', 18.7], ['Noche', 22.5]];
-const SKIES = [['Despejado', 0.04], ['Algunas nubes', 0.3], ['Nuboso', 0.55], ['Cubierto', 0.86]];
+const SKIES = [['Despejado', 0.04], ['Algunas nubes', 0.3], ['Nuboso', 0.55], ['Cubierto', 0.86], ['Lluvia', 0.95]];
 const WINDS = [['Calma', 1], ['Brisa', 4], ['Fresco', 7.5], ['Fuerte', 11]];
 const VIS = [['Cristalina', 1.4], ['Normal', 3], ['Calima', 7]];
 const STARTS = [['En pista', 'runway'], ['En final (5 km)', 'final'], ['En el aire', 'air']];
@@ -242,6 +242,6 @@ export class Shell {
         : { air: { x: ap.x, z: ap.z, alt: ap.elev + 950, heading: hdg, speed: 52, throttle: 0.72 } };
     // viento alineado ±30° con la pista en uso
     const dir = (hdg + 20 + 360) % 360;
-    return { ...FREE_FLIGHT, env: { time: f.time, coverage: f.sky, wind: { dir, speed: f.wind }, haze: f.vis, turbulence: 1 }, start };
+    return { ...FREE_FLIGHT, env: { time: f.time, coverage: f.sky, wind: { dir, speed: f.wind }, haze: f.sky > 0.9 ? Math.max(f.vis, 8) : f.vis, rain: f.sky > 0.9 ? 0.8 : 0, turbulence: 1 }, start };
   }
 }
