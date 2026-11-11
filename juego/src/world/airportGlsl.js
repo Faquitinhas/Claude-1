@@ -72,7 +72,7 @@ vec4 airportSurface(vec2 p, vec4 nMacro, vec4 nFine, vec4 nMicro, out float wetK
     float rw = apBox(l, vec2(0.0), vec2(hl + 60.0, hw + edgeN), fw);          // incluye zonas de parada
     if (rw > 0.0) {
       float within = apBox(l, vec2(0.0), vec2(hl, hw), fw);
-      vec3 asph = vec3(0.058, 0.058, 0.060) * (0.82 + 0.36 * nMacro.r) * (0.88 + 0.24 * nMicro.b);
+      vec3 asph = vec3(0.092, 0.091, 0.092) * (0.78 + 0.44 * nMacro.r) * (0.8 + 0.4 * nMicro.b) * (0.9 + 0.2 * nFine.g);
       // parches y juntas longitudinales
       asph *= 1.0 - 0.10 * smoothstep(0.6, 0.75, nMacro.b);
       asph *= 1.0 - 0.25 * (1.0 - smoothstep(0.0, 0.06 + fw.y, abs(fract(l.y / 3.75 + 0.5) - 0.5) * 3.75));

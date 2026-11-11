@@ -61,8 +61,8 @@ void main() {
   rel.y -= dot(rel.xz, rel.xz) / (2.0 * ${EARTH_RADIUS.toFixed(1)});
   vRel = rel; vN = n;
   vWorld = vec3(w.x + lp.x, gh + lp.y, w.y + lp.z);
-  vec3 albC = mix(vec3(0.015, 0.036, 0.015), vec3(0.027, 0.052, 0.020), h.x);
-  vec3 albB = mix(vec3(0.026, 0.058, 0.016), vec3(0.052, 0.078, 0.022), h.x);
+  vec3 albC = mix(vec3(0.020, 0.050, 0.020), vec3(0.036, 0.072, 0.026), h.x);
+  vec3 albB = mix(vec3(0.036, 0.082, 0.020), vec3(0.085, 0.118, 0.030), h.x);
   vCol = vec4(mix(albB, albC, conifer) * (0.85 + 0.3 * h2.y), 0.35 + 0.65 * smoothstep(0.05, 0.9, t));
   gl_Position = s > 0.0 ? uViewProj * vec4(rel, 1.0) : vec4(2.0, 2.0, 2.0, 1.0);
 }`;
@@ -93,7 +93,8 @@ void main() {
   vec3 E = uSunE * sunT * (wrap + back) * sh * (0.55 + 0.45 * vCol.a)
          + uMoonE * lightTransmittance(vWorld.y, uMoonDir.y) * clamp(dot(N, uMoonDir) * 0.6 + 0.4, 0.0, 1.0);
   float pocket = smoothstep(0.25, 0.6, leaf);
-  vec3 alb = vCol.rgb * (0.55 + 0.9 * leaf);
+  vec3 alb = vCol.rgb * (0.45 + 1.15 * leaf);
+  alb = mix(alb, alb * vec3(1.35, 1.2, 0.6), smoothstep(0.55, 0.8, nz2.g) * 0.5);   // brotes más claros
   vec3 col = alb / PI * (E * (0.45 + 0.55 * pocket) + skyIrradiance(N) * vCol.a * (0.6 + 0.4 * pocket));
   col = applyAP(col, vRel);
   o = vec4(col, 1.0);

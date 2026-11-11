@@ -104,8 +104,8 @@ vec3 agx(vec3 c) {
   c = agxCurve(c);
   // "look" con algo más de contraste y saturación
   float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
-  c = pow(max(c, vec3(0.0)), vec3(1.22));
-  c = l + 1.28 * (c - l);
+  c = pow(max(c, vec3(0.0)), vec3(1.13));
+  c = l + 1.36 * (c - l);
   c = mi * c;
   return clamp(c, 0.0, 1.0);   // ya codificado para pantalla (gamma 2.2)
 }
@@ -141,10 +141,21 @@ const FS_FXAA = `${GLSL_HEADER}
 uniform sampler2D uTex;
 uniform vec2 uTexel;
 uniform float uOn;
+uniform float uSharp;
 in vec2 vUV; out vec4 o;
+// Realce de nitidez adaptativo (compensa el suavizado del FXAA y del reescalado).
+vec3 sharpen(vec3 c, vec2 uv) {
+  vec3 a = textureLod(uTex, uv + vec2(uTexel.x, 0.0), 0.0).rgb, b = textureLod(uTex, uv - vec2(uTexel.x, 0.0), 0.0).rgb;
+  vec3 d = textureLod(uTex, uv + vec2(0.0, uTexel.y), 0.0).rgb, e = textureLod(uTex, uv - vec2(0.0, uTexel.y), 0.0).rgb;
+  vec3 mn = min(c, min(min(a, b), min(d, e))), mx = max(c, max(max(a, b), max(d, e)));
+  // menos realce donde el contraste local ya es alto (evita halos)
+  float amp = sqrt(clamp(min(mn.g, 1.0 - mx.g) / max(mx.g, 1e-3), 0.0, 1.0));
+  vec3 s = c + (4.0 * c - a - b - d - e) * uSharp * amp;
+  return clamp(s, 0.0, 1.0);
+}
 void main() {
   vec4 cM = textureLod(uTex, vUV, 0.0);
-  if (uOn < 0.5) { o = vec4(cM.rgb, 1.0); return; }
+  if (uOn < 0.5) { o = vec4(sharpen(cM.rgb, vUV), 1.0); return; }
   float lM = cM.a;
   float lN = textureLod(uTex, vUV + vec2(0.0, uTexel.y), 0.0).a;
   float lS = textureLod(uTex, vUV - vec2(0.0, uTexel.y), 0.0).a;
@@ -153,7 +164,7 @@ void main() {
   float lMin = min(lM, min(min(lN, lS), min(lE, lW)));
   float lMax = max(lM, max(max(lN, lS), max(lE, lW)));
   float range = lMax - lMin;
-  if (range < max(0.0312, lMax * 0.125)) { o = vec4(cM.rgb, 1.0); return; }
+  if (range < max(0.0312, lMax * 0.125)) { o = vec4(sharpen(cM.rgb, vUV), 1.0); return; }
   float lNW = textureLod(uTex, vUV + vec2(-uTexel.x, uTexel.y), 0.0).a;
   float lNE = textureLod(uTex, vUV + vec2(uTexel.x, uTexel.y), 0.0).a;
   float lSW = textureLod(uTex, vUV + vec2(-uTexel.x, -uTexel.y), 0.0).a;
@@ -194,7 +205,7 @@ void main() {
   float fin = max(pixOff, sub);
   vec2 fuv = vUV;
   if (horz) fuv.y += fin * stepLen; else fuv.x += fin * stepLen;
-  o = vec4(textureLod(uTex, fuv, 0.0).rgb, 1.0);
+  o = vec4(sharpen(textureLod(uTex, fuv, 0.0).rgb, fuv), 1.0);
 }`;
 
 export class PostFX {
@@ -217,7 +228,7 @@ export class PostFX {
     this.syncExposure = 1;
     this.syncMeter = false; // lectura bloqueante (solo pruebas)
     this.syncResult = null;
-    this.settings = { bloom: 0.045, vignette: 0.22, operator: 1, saturation: 1.0, contrast: 1.0, fxaa: true };
+    this.settings = { bloom: 0.045, vignette: 0.22, operator: 1, saturation: 1.0, contrast: 1.0, fxaa: true, sharpen: 0.32 };
     this._buf = new Uint8Array(4);
   }
 
@@ -334,7 +345,8 @@ export class PostFX {
     // FXAA + escalado a pantalla
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, outW, outH);
-    this.pFxaa.use().set('uTex', this.ldr).set('uTexel', 1 / this.w, 1 / this.h).set('uOn', s.fxaa ? 1 : 0);
+    this.pFxaa.use().set('uTex', this.ldr).set('uTexel', 1 / this.w, 1 / this.h).set('uOn', s.fxaa ? 1 : 0)
+      .set('uSharp', s.sharpen * (1 + 0.8 * Math.min(1, Math.max(0, outW / this.w - 1))));
     drawFullscreen(gl);
     gl.depthMask(true);
   }

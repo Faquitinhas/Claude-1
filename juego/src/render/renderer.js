@@ -18,11 +18,11 @@ import { Particles } from './particles.js';
 // Anillos de árboles: [celda (m), instancias por lado, lados, anillos del sólido, escala]
 export const QUALITY = {
   low: {
-    N: 2048, M: 64, scale: 0.6, fxaa: true, clouds: { res: 64, steps: 36, lightSteps: 4, scale: 0.34, shadowRes: 256 },
+    N: 2048, M: 64, scale: 0.72, fxaa: true, clouds: { res: 64, steps: 36, lightSteps: 4, scale: 0.34, shadowRes: 256 },
     trees: { rings: [[14, 88, 5, 4, 1.3], [30, 104, 4, 3, 1.9]] },
   },
   medium: {
-    N: 2048, M: 128, scale: 0.8, fxaa: true, clouds: { res: 96, steps: 52, lightSteps: 5, scale: 0.5, shadowRes: 512 },
+    N: 2048, M: 128, scale: 0.85, fxaa: true, clouds: { res: 96, steps: 52, lightSteps: 5, scale: 0.5, shadowRes: 512 },
     trees: { rings: [[7, 64, 6, 5, 1.0], [14, 104, 5, 4, 1.3], [30, 120, 4, 3, 1.9]] },
   },
   high: {
@@ -95,7 +95,7 @@ export class Renderer {
     if (m) {
       // luminancia media de la escena sin exposición (unidades: iluminancia solar = 1)
       const lum = Math.pow(2, m.logLum) / m.exposure;
-      const key = 0.035 + 0.115 * clamp((Math.log10(lum) + 5.2) / 3.4, 0, 1);
+      const key = 0.04 + 0.145 * clamp((Math.log10(lum) + 5.2) / 3.4, 0, 1);
       this.targetExposure = clamp(key / Math.max(lum, 1e-9), 0.3, 6e6);
       this.exposureReady++;
     }

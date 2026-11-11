@@ -11,7 +11,7 @@ export class CameraController {
     this.mode = 'chase';
     this.orbitYaw = 0;       // desplazamiento del usuario (rad)
     this.orbitPitch = 0;
-    this.dist = 17;
+    this.dist = 13;
     this.lookYaw = 0; this.lookPitch = -8 * DEG;   // mirada en cabina
     this.heading = null;     // rumbo suavizado de la cámara de persecución
     this.flyPos = null;
@@ -42,7 +42,7 @@ export class CameraController {
     if (this.mode === 'cockpit') this.fovCockpit = clamp(this.fovCockpit * f, 35, 95);
     else this.dist = clamp(this.dist * f, 7, 120);
   }
-  resetView() { this.orbitYaw = 0; this.orbitPitch = 0; this.lookYaw = 0; this.lookPitch = -8 * DEG; this.dist = 17; this.fovCockpit = 62; }
+  resetView() { this.orbitYaw = 0; this.orbitPitch = 0; this.lookYaw = 0; this.lookPitch = -8 * DEG; this.dist = 13; this.fovCockpit = 62; }
 
   update(cam, ac, dt, terrain) {
     const p = ac.pos;

@@ -13,8 +13,10 @@ const canvas = $('gl');
 const isTouch = qs.has('touch') || (window.matchMedia && matchMedia('(pointer: coarse)').matches && navigator.maxTouchPoints > 0);
 
 const store = new Store({
-  quality: isTouch ? 'low' : 'high', autoRes: 1, clouds: 1, volume: 0.8, autoRudder: 1, damage: 1, timeScale: 1,
+  quality: isTouch ? 'medium' : 'high', autoRes: 1, clouds: 1, volume: 0.8, autoRudder: 1, damage: 1, timeScale: 1,
 });
+// Los ajustes guardados por versiones anteriores usaban una calidad por defecto más baja.
+if (store.settings.gfx !== 2) { store.settings.gfx = 2; store.settings.quality = isTouch ? 'medium' : 'high'; store.save(); }
 // Si el arranque anterior no terminó (p. ej. la GPU se quedó sin memoria), bajar un nivel de calidad.
 const ORDER = ['low', 'medium', 'high', 'ultra'];
 try {
@@ -43,7 +45,7 @@ async function boot() {
   if (qs.get('csteps')) cloudQ.steps = +qs.get('csteps');
   const quality = qs.get('q') || store.settings.quality;
   if (qs.has('rgba')) (await import('./world/terrainGen.js')).TerrainData.forceRGBA = true;   // prueba del formato alternativo
-  game = new Game(canvas, { quality, q, cloudQ, hudCanvas: $('hud'), maxDpr: { low: 1.25, medium: 1.5, high: 2, ultra: 2 }[quality] || 1.5 });
+  game = new Game(canvas, { quality, q, cloudQ, hudCanvas: $('hud'), maxDpr: { low: 1.5, medium: 2, high: 2, ultra: 2.5 }[quality] || 1.5 });
   const env = game.env;
   audio = new AudioEngine();
   runner = new MissionRunner(game);
@@ -200,7 +202,7 @@ async function boot() {
     if (dt > 1 / 38) slow += dt; else if (dt < 1 / 55) fast += dt;
     if (resT < 1.5) return;
     const sc = game.quality.scale;
-    if (slow > resT * 0.6 && sc > 0.45) { game.quality.scale = Math.max(0.45, sc - 0.1); game.resize(); }
+    if (slow > resT * 0.6 && sc > 0.55) { game.quality.scale = Math.max(0.55, sc - 0.1); game.resize(); }
     else if (fast > resT * 0.9 && sc < game.baseScale) { game.quality.scale = Math.min(game.baseScale, sc + 0.05); game.resize(); }
     resT = 0; slow = 0; fast = 0;
   }

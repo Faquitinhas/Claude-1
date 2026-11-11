@@ -117,9 +117,14 @@ void main() {
   float forestW = smoothstep(0.35, 0.6, forest + (n3.g - 0.5) * 0.25) * (1.0 - rockW) * (1.0 - sandW);
 
   // ---- albedos (lineal) ----
-  vec3 grassLush = vec3(0.060, 0.098, 0.026), grassDry = vec3(0.150, 0.140, 0.058);
+  vec3 grassLush = vec3(0.066, 0.118, 0.028), grassDry = vec3(0.165, 0.158, 0.060);
   float dry = clamp(n1.g * 1.3 - 0.25 + (n2.b - 0.5) * 0.5 + alpine * 0.45, 0.0, 1.0);
   vec3 grass = mix(grassLush, grassDry, dry) * (0.72 + 0.56 * n3.b) * (0.85 + 0.3 * n4.r);
+  // detalle fino cerca de la cámara (matas de hierba, grano del asfalto)
+  vec4 n5 = texture(uNoiseTex, p / 0.83);
+  float nearD = 1.0 - smoothstep(20.0, 160.0, dist);
+  grass *= mix(1.0, (0.62 + 0.76 * n5.g) * (0.85 + 0.3 * n4.b), nearD);
+  grass = mix(grass, grass * vec3(1.25, 1.12, 0.7), nearD * smoothstep(0.55, 0.8, n4.g) * 0.6);
   vec3 soil = vec3(0.135, 0.098, 0.064) * (0.7 + 0.6 * n3.r);
   grass = mix(grass, soil, smoothstep(0.55, 0.9, n2.b * 0.7 + n3.r * 0.5) * 0.45);
   vec3 scree = vec3(0.21, 0.195, 0.175) * (0.75 + 0.5 * n3.b);
@@ -147,7 +152,7 @@ void main() {
   float apWet;
   vec4 apS = airportSurface(p, n2, n3, n4, apWet);
   float paved = apS.a;
-  alb = mix(alb, apS.rgb, paved);
+  alb = mix(alb, apS.rgb * mix(1.0, 0.78 + 0.44 * n5.r, nearD), paved);
 
   // ---- normal de detalle ----
   vec4 d2 = texture(uDetailN, p / 197.0) * 2.0 - 1.0;

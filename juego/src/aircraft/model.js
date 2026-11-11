@@ -493,7 +493,7 @@ export function buildAircraft() {
   B.part('cockpit');
   {
     const IN = MAT.INTERIOR;
-    const dark = [0.035, 0.036, 0.04], grey = [0.20, 0.20, 0.205], liner = [0.34, 0.33, 0.31], carpet = [0.02, 0.02, 0.022];
+    const dark = [0.10, 0.098, 0.094], grey = [0.26, 0.255, 0.25], liner = [0.46, 0.45, 0.42], carpet = [0.045, 0.043, 0.042];
     // Forro interior: copia del fuselaje desplazada hacia dentro, con normales invertidas y sin ventanas.
     const i0 = 4, i1 = 15;
     const inner = [];
@@ -521,8 +521,8 @@ export function buildAircraft() {
     quad([P.x0, P.y0, P.z0], [P.x0 + P.w, P.y0, P.z0], [P.x0 + P.w, P.y0 + P.h, zt], [P.x0, P.y0 + P.h, zt], [0.05, 0.05, 0.055], [0.8, 0, MAT.PANEL]);
     // Visera antirreflejos y remate hacia el piloto
     const gy = P.y0 + P.h + 0.012;
-    quad([-0.55, gy, zt + 0.07], [0.55, gy, zt + 0.07], [0.55, gy + 0.012, -1.0], [-0.55, gy + 0.012, -1.0], [0.012, 0.012, 0.013], [1.0, 0, IN]);
-    quad([-0.55, gy - 0.03, zt + 0.07], [0.55, gy - 0.03, zt + 0.07], [0.55, gy, zt + 0.07], [-0.55, gy, zt + 0.07], [0.015, 0.015, 0.016], [1.0, 0, IN]);
+    quad([-0.55, gy, zt + 0.07], [0.55, gy, zt + 0.07], [0.55, gy + 0.012, -1.0], [-0.55, gy + 0.012, -1.0], [0.05, 0.048, 0.046], [0.85, 0, IN]);
+    quad([-0.55, gy - 0.03, zt + 0.07], [0.55, gy - 0.03, zt + 0.07], [0.55, gy, zt + 0.07], [-0.55, gy, zt + 0.07], [0.06, 0.058, 0.055], [0.85, 0, IN]);
     // Parte baja bajo el tablero y cortafuegos
     quad([-0.55, -0.62, P.z0 - 0.02], [0.55, -0.62, P.z0 - 0.02], [0.55, P.y0, P.z0], [-0.55, P.y0, P.z0], dark, [0.95, 0, IN]);
     // Mamparo trasero
@@ -537,7 +537,7 @@ export function buildAircraft() {
       quad(v(1, -1, 1), v(1, -1, -1), v(1, 1, -1), v(1, 1, 1), col, [0.95, 0, IN]);
       quad(v(-1, 1, 1), v(1, 1, 1), v(1, 1, -1), v(-1, 1, -1), col, [0.95, 0, IN]);
     };
-    const seatCol = [0.11, 0.105, 0.10];
+    const seatCol = [0.19, 0.15, 0.115];
     for (const sx of [-1, 1]) {
       box([sx * 0.25, 0.02, 0.20], [0.2, 0.36, 0.045], seatCol);     // respaldo
       box([sx * 0.25, -0.32, -0.02], [0.2, 0.05, 0.22], seatCol);    // banqueta

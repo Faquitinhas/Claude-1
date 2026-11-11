@@ -174,8 +174,11 @@ void main() {
   if (interior) {
     // Dentro de la cabina la luz difusa entra por las ventanas: mezcla de cielo y suelo, atenuada.
     vec3 Ecab = skyIrradiance(vec3(0.0, 1.0, 0.0)) * 0.55 + skyIrradiance(vec3(0.0, -1.0, 0.0)) * 0.8 + skyIrradiance(N) * 0.5;
+    // La luz que llega dentro es sobre todo rebote (suelo, capó, tapizado): casi neutra y algo cálida.
+    float eL = dot(Ecab, vec3(0.2126, 0.7152, 0.0722));
+    Ecab = mix(Ecab, vec3(eL) * vec3(1.06, 1.0, 0.92), 0.8) + uSunE * sunT * max(uSunDir.y, 0.0) * 0.045 * vec3(1.0, 0.95, 0.85);
     // El ojo se adapta al interior: se realza la luz de cabina (más aún en el tablero).
-    col += diff / PI * Ecab * (id == ${MAT.PANEL} ? 3.2 : 1.5);
+    col += diff / PI * Ecab * (id == ${MAT.PANEL} ? 4.5 : 3.0) * (0.75 + 0.25 * N.y);
     col += panelGlow;
   } else {
     col += diff / PI * skyIrradiance(N) * ao;
