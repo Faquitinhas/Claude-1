@@ -20,11 +20,12 @@ export class AudioEngine {
   }
 
   // Debe llamarse tras un gesto del usuario (política de reproducción automática).
-  init() {
+  // Se puede pasar un contexto ya creado (p. ej. OfflineAudioContext para pruebas).
+  init(context) {
     if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume(); return; }
     const AC = window.AudioContext || window.webkitAudioContext;
-    if (!AC) return;
-    const ctx = (this.ctx = new AC());
+    if (!AC && !context) return;
+    const ctx = (this.ctx = context || new AC());
     const now = ctx.currentTime;
     // ---- cadena maestra ----
     this.master = ctx.createGain(); this.master.gain.value = 0;
@@ -51,7 +52,7 @@ export class AudioEngine {
     const wave = ctx.createPeriodicWave(re, im);
     this.eng = [];
     this.engBus = ctx.createGain(); this.engBus.gain.value = 0;
-    for (const [mult, g] of [[1, 0.55], [0.5, 0.42], [0.25, 0.16], [2, 0.12]]) {
+    for (const [mult, g] of [[1, 0.55], [0.5, 0.42], [1.5, 0.14], [2, 0.12]]) {
       const o = ctx.createOscillator(); o.setPeriodicWave(wave); o.frequency.value = 20 * mult;
       const gn = ctx.createGain(); gn.gain.value = g;
       o.connect(gn); gn.connect(this.engBus); o.start(now);
@@ -211,7 +212,7 @@ export class AudioEngine {
     const v = tel.tas;
     const q = clamp((v / (SPEC.vne * KT)) ** 2, 0, 1.4);
     set(this.windBP.frequency, 250 + v * 9 + (inside ? 0 : 300), 0.1);
-    set(this.windG.gain, q * (inside ? 0.5 : 0.22 * att) + (inside ? 0 : 0.012), 0.1);
+    set(this.windG.gain, Math.sqrt(q) * q * (inside ? 0.95 : 0.4 * att) + q * 0.25 * (inside ? 1 : att) + (inside ? 0 : 0.012), 0.1);
     set(this.rumbleLP.frequency, 60 + v * 1.2);
     set(this.rumbleG.gain, (inside ? 0.5 : 0.0) * q + (tel.stall > 0.9 && !tel.onGround ? 0.5 * (inside ? 1 : 0.3) : 0), 0.1); // bataneo en la pérdida
     // ---- rodadura y derrape ----

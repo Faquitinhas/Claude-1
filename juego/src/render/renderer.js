@@ -13,6 +13,7 @@ import { AircraftRenderer } from '../aircraft/render.js';
 import { AirportLights } from '../world/lights.js';
 import { AirportObjects } from '../world/objects.js';
 import { Trees } from '../world/trees.js';
+import { Particles } from './particles.js';
 
 // Anillos de árboles: [celda (m), instancias por lado, lados, anillos del sólido, escala]
 export const QUALITY = {
@@ -60,6 +61,7 @@ export class Renderer {
     this.lights = new AirportLights(gl, this.terrainData);
     this.objects = new AirportObjects(gl, this.terrainData);
     this.trees = new Trees(gl, this.q.trees);
+    this.particles = new Particles(gl);
     this.terrain.treeRange = this.trees.rings.length ? this.trees.rings[this.trees.rings.length - 1].G * 0.5 * this.trees.rings[this.trees.rings.length - 1].cell : 0;
     this.spot = { pos: [0, 0, 0], dir: [0, 0, -1], intensity: 0 };
     this.post.settings.fxaa = this.q.fxaa;
@@ -146,10 +148,9 @@ export class Renderer {
     this.sky.render(ctx);
     this.lights.render(ctx);
     this.clouds.render(ctx, post.sceneColorFBO, post.sceneDepth);
-    if (hooks.near) {
-      bindFBO(gl, post.sceneFBO);
-      hooks.near(ctx);
-    }
+    bindFBO(gl, post.sceneFBO);
+    this.particles.render(ctx);
+    if (hooks.near) hooks.near(ctx);
     const night = clamp((Math.log10(ex) - 2.2) / 2.5, 0, 1) * 0.85;
     post.render(this.outW, this.outH, ex, env.time, night);
   }

@@ -119,10 +119,11 @@ export class Game {
     this._camPrev = [cp[0], cp[1], cp[2]];
     if (!this.paused && (this.state === 'flying' || this.state === 'menu')) {
       ac.update(dt, this.world);
-      for (const e of ac.events) this.emit('acEvent', e);
+      for (const e of ac.events) { this.onAcEvent(e); this.emit('acEvent', e); }
       ac.events.length = 0;
     }
     renderer.aircraft.update(ac, this.paused ? 0 : dt);
+    if (!this.paused) this.updateEffects(dt);
     this.updateNav();
     camCtl.update(cam, ac, dt, renderer.terrainData);
     this.updateGpws(dt);
@@ -179,6 +180,51 @@ export class Game {
       }
     }
     if (!this.gpws && !nearField && tel.agl < 300 && tel.vs < -9) this.gpws = 'RÉGIMEN DE DESCENSO';
+  }
+
+  // Efectos visuales ligados a la física: polvo al rodar fuera de pista, humo del accidente.
+  updateEffects(dt) {
+    const ac = this.ac, P = this.renderer.particles;
+    P.update(dt, ac.wind);
+    this._fxT = (this._fxT || 0) - dt;
+    if (this._fxT > 0) return;
+    this._fxT = 0.05;
+    for (const g of ac.gear) {
+      if (!g.onGround) continue;
+      const sp = Math.abs(g.spin * g.radius);
+      const w = qrot(ac.q, [g.pos[0], g.pos[1] + g.comp, g.pos[2]]);
+      const pos = [ac.pos[0] + w[0], ac.pos[1] + w[1] + 0.1, ac.pos[2] + w[2]];
+      if (g.surface !== 'asphalt' && g.surface !== 'water' && sp > 6) {
+        const dust = g.surface === 'snow' ? [0.9, 0.92, 0.95] : g.surface === 'sand' ? [0.62, 0.55, 0.42] : [0.36, 0.31, 0.24];
+        P.emit(1, { pos, vel: [ac.vel[0] * 0.25, 0.3, ac.vel[2] * 0.25], size: 0.5, grow: 2.2, life: 1.6, color: dust, alpha: Math.min(0.1 + sp * 0.006, 0.3), rise: 0.8 });
+      } else if (g.surface === 'asphalt' && g.slip > 0.2 && sp > 8) {
+        P.emit(1, { pos, vel: [ac.vel[0] * 0.3, 0.2, ac.vel[2] * 0.3], size: 0.3, grow: 1.6, life: 0.9, color: [0.75, 0.75, 0.76], alpha: 0.2 });
+      }
+    }
+    if (ac.crashed && ac.pos[1] > 0.6 && (this._smokeT = (this._smokeT || 0) + 0.05) < 25) {
+      const o = qrot(ac.q, [0, 0.1, -1.4]);
+      P.emit(1, { pos: [ac.pos[0] + o[0], ac.pos[1] + o[1], ac.pos[2] + o[2]], vel: [0, 2.2, 0], size: 0.7, grow: 1.4, life: 4.5, color: [0.05, 0.05, 0.055], alpha: 0.5, rise: 2.5, spread: 0.4, drag: 0.5 });
+    }
+    if (!ac.crashed) this._smokeT = 0;
+  }
+
+  // Humo de neumáticos en la toma de contacto, salpicadura en el agua, polvo en un impacto.
+  onAcEvent(e) {
+    const ac = this.ac, P = this.renderer.particles;
+    if (e.type === 'touch') {
+      const g = ac.gear.find((x) => x.name === e.wheel);
+      if (!g) return;
+      const w = qrot(ac.q, g.pos);
+      const pos = [ac.pos[0] + w[0], ac.pos[1] + w[1] + 0.15, ac.pos[2] + w[2]];
+      if (e.surface === 'asphalt' && e.speed > 12) {
+        P.emit(Math.round(4 + Math.min(e.vs, 3) * 3), { pos, vel: [ac.vel[0] * 0.35, 0.5, ac.vel[2] * 0.35], size: 0.35, grow: 2.4, life: 1.3, color: [0.82, 0.82, 0.84], alpha: 0.32, rise: 0.9, jitter: 1.2 });
+      } else if (e.surface !== 'asphalt' && e.speed > 5) {
+        P.emit(6, { pos, vel: [ac.vel[0] * 0.3, 0.6, ac.vel[2] * 0.3], size: 0.6, grow: 2.6, life: 1.8, color: [0.4, 0.34, 0.26], alpha: 0.3, rise: 1.2, jitter: 1.5 });
+      }
+    } else if (e.type === 'crash') {
+      const water = e.reason === 'Amerizaje';
+      P.emit(water ? 40 : 30, { pos: [ac.pos[0], Math.max(ac.pos[1] - 0.5, 0.3), ac.pos[2]], vel: [ac.vel[0] * 0.2, water ? 5 : 2, ac.vel[2] * 0.2], size: 1.2, grow: water ? 3 : 4, life: water ? 1.6 : 3.5, color: water ? [0.85, 0.9, 0.95] : [0.3, 0.26, 0.2], alpha: 0.45, rise: water ? 5 : 2, spread: 2.5, jitter: 4 });
+    }
   }
 
   // Destino de navegación (para el GPS y el HUD): el aeródromo elegido o el más cercano.

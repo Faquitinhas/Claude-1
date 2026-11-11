@@ -265,28 +265,55 @@ export class Terrain {
     this.grid = buildGrid(gl, M);
     this.prog = new Program(gl, VS, FS, 'terrain');
     this.shadowRes = Math.min(2048, data.N / 2);
-    this.shadowTex = createTexture(gl, { width: this.shadowRes, height: this.shadowRes, format: 'r8', filter: 'linear', wrap: 'clamp' });
+    // Dos texturas de sombra: la visible y otra donde se va horneando la nueva por franjas.
+    const mkS = () => createTexture(gl, { width: this.shadowRes, height: this.shadowRes, format: 'r8', filter: 'linear', wrap: 'clamp' });
+    this.shadowTex = mkS();
+    this.shadowBack = mkS();
     this.shadowFBO = createFBO(gl, [this.shadowTex]);
+    this.shadowBackFBO = createFBO(gl, [this.shadowBack]);
     this.shadowProg = new Program(gl, FULLSCREEN_VS, FS_SHADOW, 'terrShadow');
     this.shadowDir = [0, 0, 0];
+    this.bake = null;         // horneado progresivo en curso: { dir, band }
     this.debug = [0, 0, 0, 0];
     this.trisDrawn = 0;
     this.digitTex = createDigitTexture(gl);
   }
 
-  // Rehornea la sombra del relieve si la luz se movió lo suficiente.
-  updateShadow(lightDir, force = false) {
-    const d = this.shadowDir;
-    const dot = d[0] * lightDir[0] + d[1] * lightDir[1] + d[2] * lightDir[2];
-    if (!force && dot > 0.99999) return false; // ~0.25°
+  _bakeShadow(fbo, lightDir, y0, y1) {
     const gl = this.gl;
-    this.shadowDir = [lightDir[0], lightDir[1], lightDir[2]];
-    bindFBO(gl, this.shadowFBO);
+    bindFBO(gl, fbo);
     gl.disable(gl.DEPTH_TEST); gl.disable(gl.BLEND); gl.disable(gl.CULL_FACE);
+    if (y0 !== undefined) { gl.enable(gl.SCISSOR_TEST); gl.scissor(0, y0, this.shadowRes, y1 - y0); }
     this.shadowProg.use().set('uHeightTex', this.data.heightTex).set('uLightDir', lightDir)
       .set('uP', this.data.texel, this.data.N, this.data.maxHeight + 5, this.shadowRes);
     drawFullscreen(gl);
-    return true;
+    gl.disable(gl.SCISSOR_TEST);
+  }
+
+  // Mantiene al día la sombra del relieve. Cuando la luz se mueve poco, la nueva sombra se
+  // hornea por franjas a lo largo de varios frames (sin tirones) y luego se intercambia.
+  updateShadow(lightDir, force = false) {
+    const d = this.shadowDir;
+    const dot = d[0] * lightDir[0] + d[1] * lightDir[1] + d[2] * lightDir[2];
+    if (force || dot < 0.9994) {            // primera vez o salto grande (> 2°): de una vez
+      this.shadowDir = [lightDir[0], lightDir[1], lightDir[2]];
+      this.bake = null;
+      this._bakeShadow(this.shadowFBO, lightDir);
+      return true;
+    }
+    const BANDS = 16;
+    if (!this.bake && dot < 0.999992) this.bake = { dir: [lightDir[0], lightDir[1], lightDir[2]], band: 0 };   // ~0.23°
+    if (this.bake) {
+      const bk = this.bake, h = this.shadowRes / BANDS;
+      this._bakeShadow(this.shadowBackFBO, bk.dir, Math.round(bk.band * h), Math.round((bk.band + 1) * h));
+      if (++bk.band >= BANDS) {
+        [this.shadowTex, this.shadowBack] = [this.shadowBack, this.shadowTex];
+        [this.shadowFBO, this.shadowBackFBO] = [this.shadowBackFBO, this.shadowFBO];
+        this.shadowDir = bk.dir;
+        this.bake = null;
+      }
+    }
+    return false;
   }
 
   // Asigna las texturas del terreno a un programa que incluya GLSL_TERRAIN_SAMPLING.

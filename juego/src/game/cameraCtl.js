@@ -62,7 +62,14 @@ export class CameraController {
       const ba = ac.tel.bodyAcc;
       const tx = clamp(-ba[0] * 0.004, -0.04, 0.04), ty = clamp(-(ba[1] - 9.8) * 0.0035, -0.05, 0.04), tz = clamp(-ba[2] * 0.004, -0.05, 0.05);
       this.headOff[0] = damp(this.headOff[0], tx, 6, dt); this.headOff[1] = damp(this.headOff[1], ty, 6, dt); this.headOff[2] = damp(this.headOff[2], tz, 6, dt);
-      const eye = qrot(ac.q, [e[0] + this.headOff[0], e[1] + this.headOff[1], e[2] + this.headOff[2]]);
+      // vibración del motor y de la rodadura (milímetros)
+      this.vt = (this.vt || 0) + dt;
+      const rpmK = Math.min(ac.engine.rpm / 2700, 1) * 0.0011;
+      const rollK = ac.tel.onGround ? Math.min(ac.tel.groundSpeed / 30, 1) * (ac.gear[1].surface === 'asphalt' ? 0.0016 : 0.006) : 0;
+      const buff = ac.tel.stall > 0.9 && !ac.tel.onGround ? 0.004 : 0;
+      const vb = rpmK + rollK + buff;
+      const sx = Math.sin(this.vt * 97) * Math.sin(this.vt * 31.7) * vb, sy = Math.sin(this.vt * 113 + 1.3) * Math.sin(this.vt * 27.1) * vb * 1.4;
+      const eye = qrot(ac.q, [e[0] + this.headOff[0] + sx, e[1] + this.headOff[1] + sy, e[2] + this.headOff[2]]);
       cam.pos = [p[0] + eye[0], p[1] + eye[1], p[2] + eye[2]];
       const ql = quat.fromHPR([0, 0, 0, 1], -this.lookYaw, this.lookPitch, 0);
       quat.mul(cam.q, ac.q, ql);
