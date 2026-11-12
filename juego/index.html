@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Horizonte — Simulador de vuelo</title>
+<meta name="description" content="Simulador de vuelo 3D en el navegador: física de vuelo real, atmósfera, nubes volumétricas y una isla entera por explorar.">
+<meta name="theme-color" content="#0b1016">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="gl"></canvas>
+<canvas id="hud"></canvas>
+<div id="touch"></div>
+<div id="hint" class="hidden"></div>
+<div id="fly" class="hidden">
+  <button data-fly="camera">Vista</button>
+  <button data-fly="map">Mapa</button>
+  <button data-fly="pause">Pausa</button>
+</div>
+<div id="ui" class="solid"><div class="load"><h1 class="logo">HORIZONTE</h1><p class="tag">Simulador de vuelo</p><div class="bar"><i></i></div><p>Cargando…</p></div></div>
+<div id="rotate"><div><b>Gira el dispositivo</b><br><span style="color:#9fb0c2">Horizonte se juega en horizontal.</span></div></div>
+<div id="dbg"></div>
+<noscript><p style="position:fixed;inset:0;display:grid;place-items:center">Horizonte necesita JavaScript.</p></noscript>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
