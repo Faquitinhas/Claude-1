@@ -105,13 +105,21 @@ export const FREE_FLIGHT = {
 };
 
 // Evalúa una toma de tierra. Devuelve puntuación (0-100), estrellas y desglose.
-export function scoreLanding(L, a) {
+// Niveles de dificultad: viento y turbulencia, ayudas, resistencia del tren y exigencia al puntuar.
+export const DIFFICULTY = [
+  { name: 'Fácil', desc: 'Menos viento y turbulencia, el avión se nivela solo y avisa antes de entrar en pérdida, tren más resistente y puntuación generosa.', wind: 0.5, turb: 0.4, stab: true, rudder: 1, tough: 1.7, lenient: 1.5, stars: [75, 50, 25] },
+  { name: 'Normal', desc: 'El vuelo tal cual es, con las ayudas que elijas en Ajustes.', wind: 1, turb: 1, stab: false, rudder: null, tough: 1, lenient: 1, stars: [85, 65, 40] },
+  { name: 'Difícil', desc: 'Más viento y turbulencia, timón siempre manual, tren más frágil y puntuación exigente.', wind: 1.35, turb: 1.6, stab: false, rudder: 0, tough: 0.85, lenient: 0.8, stars: [90, 75, 55] },
+];
+
+export function scoreLanding(L, a, df = DIFFICULTY[1]) {
   const fpm = (L.vs / FT) * 60;
   const parts = [];
   // 1. Régimen de descenso en el contacto
   let sVs;
-  if (fpm <= 120) sVs = 1; else if (fpm <= 300) sVs = 1 - 0.35 * ((fpm - 120) / 180);
-  else if (fpm <= 600) sVs = 0.65 - 0.5 * ((fpm - 300) / 300); else sVs = 0.05;
+  const f = fpm / df.lenient;   // la exigencia depende de la dificultad
+  if (f <= 120) sVs = 1; else if (f <= 300) sVs = 1 - 0.35 * ((f - 120) / 180);
+  else if (f <= 600) sVs = 0.65 - 0.5 * ((f - 300) / 300); else sVs = 0.05;
   parts.push({ label: 'Suavidad', value: `${Math.round(fpm)} ft/min`, score: sVs, note: fpm <= 120 ? 'Como una pluma' : fpm <= 300 ? 'Correcto' : fpm <= 600 ? 'Duro' : 'Muy duro' });
   // 2. Eje de pista
   const off = Math.abs(L.across);
@@ -125,16 +133,16 @@ export function scoreLanding(L, a) {
   else if (d <= zone1) sZ = 1; else sZ = Math.max(0, 1 - (d - zone1) / (a.length * 0.45));
   parts.push({ label: 'Punto de contacto', value: `${Math.round(d)} m del umbral`, score: sZ, note: d < 0 ? 'Antes de la pista' : d <= zone1 ? 'En la zona' : 'Largo' });
   // 4. Alineación y velocidad
-  const sA = Math.max(0, 1 - Math.abs(L.crab) / 12);
+  const sA = Math.max(0, 1 - Math.abs(L.crab) / (12 * df.lenient));
   parts.push({ label: 'Alineación', value: `${Math.abs(L.crab).toFixed(1)}°`, score: sA, note: Math.abs(L.crab) < 3 ? 'Recto' : 'Cruzado' });
   const k = L.ias / KT;
   const sS = k < 42 ? 0.6 : k <= 62 ? 1 : Math.max(0, 1 - (k - 62) / 25);
   parts.push({ label: 'Velocidad', value: `${k.toFixed(0)} kt`, score: sS, note: k <= 62 ? 'Buena' : 'Rápido' });
   let total = 100 * (0.36 * sVs + 0.2 * sC + 0.2 * sZ + 0.12 * sA + 0.12 * sS);
-  total -= 8 * L.bounces;
+  total -= (8 / df.lenient) * L.bounces;
   if (L.bounces) parts.push({ label: 'Botes', value: String(L.bounces), score: Math.max(0, 1 - L.bounces * 0.4), note: 'Recoge un poco menos' });
   total = Math.max(0, Math.min(100, total));
-  const stars = total >= 85 ? 3 : total >= 65 ? 2 : total >= 40 ? 1 : 0;
+  const stars = total >= df.stars[0] ? 3 : total >= df.stars[1] ? 2 : total >= df.stars[2] ? 1 : 0;
   return { total: Math.round(total), stars, parts, fpm };
 }
 
@@ -254,7 +262,7 @@ export class MissionRunner {
           if (this.onEnd) this.onEnd(this.result);
           return;
         }
-        const sc = scoreLanding(L, L.airport);
+        const sc = scoreLanding(L, L.airport, DIFFICULTY[this.game.difficulty ?? 1]);
         sc.airport = L.airport;
         const [al, acr] = runwayLocal(L.airport, ac.pos[0], ac.pos[2]);
         sc.stoppedOnRunway = pavedAt(L.airport, al, acr) > 0;

@@ -48,6 +48,9 @@ suave (↓). Ascendé a unos 75 nudos.
   cruzado, aterrizaje con lluvia, pista de montaña, travesía al volcán, motor parado y aproximación nocturna. Los
   aterrizajes se puntúan (suavidad, eje, punto de contacto, alineación, velocidad).
 - **Vuelo libre:** elegís aeródromo, pista, hora, nubes, viento y visibilidad.
+- **Dificultad:** fácil (menos viento, el avión se nivela solo y protege de la pérdida, tren
+  más resistente y puntuación generosa), normal, o difícil (más viento y turbulencia, timón
+  manual, tren más frágil y puntuación exigente). Se elige en el menú o en Ajustes.
 
 ## Qué simula
 

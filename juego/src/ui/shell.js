@@ -1,6 +1,6 @@
 // Interfaz del juego (menús en DOM): carga, menú principal, misiones, vuelo libre, ajustes,
 // ayuda, pausa y resultados. La escena 3D sigue viva detrás.
-import { MISSIONS, FREE_FLIGHT } from '../game/missions.js';
+import { MISSIONS, FREE_FLIGHT, DIFFICULTY } from '../game/missions.js';
 import { AIRPORTS } from '../world/airports.js';
 
 const stars = (n, big = false) => `<span class="stars${big ? ' big' : ''}">${'★'.repeat(n)}<s>${'★'.repeat(3 - n)}</s></span>`;
@@ -59,6 +59,8 @@ export class Shell {
         <button class="primary" data-a="quick">Volar ahora</button>
         <button data-a="missions">Misiones</button>
         <button data-a="free">Vuelo libre</button>
+        <div class="seg" title="Dificultad">${DIFFICULTY.map((d, i) => `<button data-a="diff" data-v="${i}" class="${(this.store.settings.difficulty ?? 1) === i ? 'sel' : ''}">${d.name}</button>`).join('')}</div>
+        <p class="sub" style="font-size:.8rem;margin:0;min-height:3.6em">${(DIFFICULTY[this.store.settings.difficulty] || DIFFICULTY[1]).desc}</p>
         <div class="row"><button class="ghost" data-a="help">Controles</button><button class="ghost" data-a="settings">Ajustes</button></div>
       </div>
       <p class="sub" style="margin-top:14px;font-size:.8rem">Isla Aurora · 4 aeródromos · física de vuelo real</p>
@@ -109,6 +111,9 @@ export class Shell {
       <div class="opt"><label>Nubes</label>${seg('clouds', [['Volumétricas', 1], ['Desactivadas', 0]], s.clouds)}</div>
       <h3>Sonido</h3>
       <div class="opt"><label>Volumen</label><input type="range" min="0" max="1" step="0.05" value="${s.volume}" data-s="volume"></div>
+      <h3>Dificultad</h3>
+      <div class="opt"><label>Nivel</label>${seg('difficulty', DIFFICULTY.map((d, i) => [d.name, i]), s.difficulty ?? 1)}</div>
+      <p class="sub" style="font-size:.84rem">${(DIFFICULTY[s.difficulty] || DIFFICULTY[1]).desc}</p>
       <h3>Ayudas al pilotaje</h3>
       <div class="opt"><label>Timón</label>${seg('autoRudder', [['Automático', 1], ['Manual (A / D)', 0]], s.autoRudder)}</div>
       <div class="opt"><label>Daños</label>${seg('damage', [['Realistas', 1], ['Desactivados', 0]], s.damage)}</div>
@@ -194,6 +199,7 @@ export class Shell {
     if (h.click) h.click();
     switch (a) {
       case 'menu': this.menu(); h.preview(null); break;
+      case 'diff': this.store.settings.difficulty = +v; this.store.save(); h.applySettings(); this.menu(); break;
       case 'missions': this.missions(); break;
       case 'free': this.freeSetup(); h.preview(this.free); break;
       case 'help': this.help(false); break;

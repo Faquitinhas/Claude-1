@@ -526,7 +526,7 @@ export class Aircraft {
         }
         g.onGround = true; g.comp = pen; g.load = Fn;
         onGround = true; wheelLoad += Fn;
-        if (!collapsed && !this.noDamage && (Fn > g.maxLoad || -vnrm > 4.2)) {
+        if (!collapsed && !this.noDamage && (Fn > g.maxLoad * (this.tough || 1) || -vnrm > 4.2 * (this.tough || 1))) {
           this.damage.gear = true;
           this.events.push({ type: 'gearCollapse', wheel: g.name, t: this.t });
         }

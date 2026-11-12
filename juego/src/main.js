@@ -2,7 +2,7 @@
 import { Game, KT, FT } from './game/game.js';
 import { Shell } from './ui/shell.js';
 import { Store } from './game/store.js';
-import { MissionRunner, MISSIONS, FREE_FLIGHT } from './game/missions.js';
+import { MissionRunner, MISSIONS, FREE_FLIGHT, DIFFICULTY } from './game/missions.js';
 import { AudioEngine } from './audio/audio.js';
 import { TouchControls } from './ui/touch.js';
 import { AIRPORTS } from './world/airports.js';
@@ -13,7 +13,7 @@ const canvas = $('gl');
 const isTouch = qs.has('touch') || (window.matchMedia && matchMedia('(pointer: coarse)').matches && navigator.maxTouchPoints > 0);
 
 const store = new Store({
-  quality: isTouch ? 'medium' : 'high', autoRes: 1, clouds: 1, volume: 0.8, autoRudder: 1, damage: 1, timeScale: 1,
+  quality: isTouch ? 'medium' : 'high', autoRes: 1, clouds: 1, volume: 0.8, autoRudder: 1, damage: 1, timeScale: 1, difficulty: 1,
 });
 // Los ajustes guardados por versiones anteriores usaban una calidad por defecto más baja.
 if (store.settings.gfx !== 2) { store.settings.gfx = 2; store.settings.quality = isTouch ? 'medium' : 'high'; store.save(); }
@@ -60,10 +60,16 @@ async function boot() {
   game.baseScale = game.quality.scale;
 
   // ---------- ajustes ----------
+  let lastEnv = null;
   handlers.applySettings = () => {
     const s = store.settings;
     audio.setVolume(s.volume);
-    game.input.assist.autoRudder = !!s.autoRudder;
+    const d = DIFFICULTY[s.difficulty] || DIFFICULTY[1];
+    game.difficulty = DIFFICULTY[s.difficulty] ? s.difficulty : 1;
+    game.input.assist.autoRudder = d.rudder === null ? !!s.autoRudder : !!d.rudder;
+    game.input.assist.stability = d.stab;
+    game.ac.tough = d.tough;
+    if (lastEnv) { env.wind.speed = lastEnv.wind.speed * d.wind; env.turbulenceScale = (lastEnv.turbulence ?? 1) * d.turb; }
     game.renderer.clouds.enabled = !!s.clouds;
     env.timeScale = s.timeScale;
     game.ac.noDamage = !s.damage;
@@ -75,7 +81,9 @@ async function boot() {
   // ---------- menú con la escena en vivo ----------
   const applyEnv = (e) => {
     env.timeOfDay = e.time; env.clouds.coverage = e.coverage; env.haze = e.haze;
-    env.wind = { ...e.wind }; env.turbulenceScale = e.turbulence ?? 1;
+    const d = DIFFICULTY[store.settings.difficulty] || DIFFICULTY[1];
+    lastEnv = e;
+    env.wind = { ...e.wind, speed: e.wind.speed * d.wind }; env.turbulenceScale = (e.turbulence ?? 1) * d.turb;
     env.rain = e.rain || 0; game.ac.wet = env.rain > 0 ? Math.min(1, 0.5 + env.rain) : 0;
     env.update(0);
     game.renderer.exposureReady = 0;

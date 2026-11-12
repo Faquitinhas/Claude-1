@@ -20,7 +20,7 @@ export class Input {
     this.yoke = [0, 0];
     this.touch = { active: false, roll: 0, pitch: 0, yaw: 0, throttle: null, brake: 0 };
     this.pad = { active: false };
-    this.assist = { autoRudder: true };
+    this.assist = { autoRudder: true, stability: false };
     this.actions = [];            // acciones discretas para el juego: 'camera', 'pause', 'help', ...
     this.dragging = false;
     this.onDrag = null; this.onZoom = null;
@@ -166,6 +166,14 @@ export class Input {
         yaw = clamp(tel.beta * 3.2 + ac.omega[1] * 0.35 + roll * 0.18, -1, 1);
       }
     } else this._gndHdg = null;
+    // ---- ayuda (modo fácil): nivelado de alas y protección de pérdida ----
+    if (this.assist.stability && this.enabled && !ac.tel.onGround) {
+      const tel = ac.tel;
+      if (Math.abs(roll) < 0.08) roll = clamp(-tel.roll * 2.0 + ac.omega[2] * 0.5, -0.7, 0.7);
+      else if (Math.abs(tel.roll) > 0.8 && roll * tel.roll > 0) roll *= clamp(1 - (Math.abs(tel.roll) - 0.8) / 0.25, 0, 1);   // límite ~55° de alabeo
+      const k = clamp((tel.stall - 0.3) / 0.4, 0, 1);
+      if (k > 0) pitch = Math.min(pitch, pitch * (1 - k)) - 0.35 * k;
+    }
     inp.roll = roll; inp.pitch = pitch; inp.yaw = yaw;
     inp.throttle = this.throttle;
     inp.flaps = FLAP_NOTCHES[this.flapNotch];
