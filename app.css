@@ -107,9 +107,10 @@ button:focus-visible,.card:focus-visible{outline:2px solid var(--stamp);outline-
 .cell.hl .card{animation:hl 1.4s ease}
 @keyframes hl{0%,60%{box-shadow:0 0 0 3px #fff,0 0 30px hsl(var(--h) 80% 60%)}100%{box-shadow:0 8px 20px -10px #000a}}
 
-.card.img.fit{background-color:#555;background-blend-mode:multiply}
-.card.img.fit::before{display:block;inset:0;border:0;border-radius:0;background:var(--bg) center/contain no-repeat}
-.card.img.fit .yr,.card.img.fit .stamp,.card.img.fit .fvs{z-index:2}
+/* imágenes que no tienen forma de póster (logos de series, fotos apaisadas): una sola copia, centrada sobre el color de la fase */
+.card.img.fit{background-image:linear-gradient(165deg,hsl(var(--h) 55% 28%),hsl(calc(var(--h) + 35) 50% 10%))!important}
+.card.img.fit::before{display:block;inset:10px;border:0;border-radius:6px;background:var(--pi) center/contain no-repeat;filter:drop-shadow(0 6px 14px #0009)}
+.card.img.fit .yr,.card.img.fit .stamp,.card.img.fit .fvs,.card.img.fit .when,.card.img.fit .soon{z-index:2}
 .bnr{position:relative;aspect-ratio:16/7;margin:-22px -20px 12px;overflow:hidden;background:#111 center/cover no-repeat;border-radius:18px 18px 0 0}
 .bnr::after{content:"";position:absolute;inset:0;background:linear-gradient(to top,var(--card) 2%,transparent 65%)}
 .pl{display:inline-block;vertical-align:middle;margin-left:10px;line-height:0}
@@ -243,7 +244,7 @@ details.box summary{cursor:pointer;margin:0}
 /* ====== Tipografía y encabezado ====== */
 body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
 h1{font-weight:800;letter-spacing:-.035em;line-height:.95;font-size:clamp(2.4rem,10.5vw,3.3rem)}
-h1 em{font-style:normal;background:linear-gradient(100deg,#ff5c85 10%,#b07bff 90%);-webkit-background-clip:text;background-clip:text;color:transparent}
+h1 em{display:block;font-style:normal;background:linear-gradient(100deg,#ff5c85 10%,#b07bff 90%);-webkit-background-clip:text;background-clip:text;color:transparent}
 .kick{margin:0 0 10px;font:600 clamp(.62rem,2.7vw,.72rem)/1.2 "DM Sans",system-ui,sans-serif;letter-spacing:.1em;white-space:nowrap;text-transform:uppercase;color:#b9b2e6}
 .sub{color:var(--mut);font-size:1rem}
 .sub b{color:var(--fg);font-weight:700}
@@ -251,12 +252,12 @@ h1 em{font-style:normal;background:linear-gradient(100deg,#ff5c85 10%,#b07bff 90
 .tab{font-weight:600}
 .sheet h3,.hd h3{letter-spacing:-.02em}
 .bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 26px}
-.brand{display:inline-flex;align-items:center;gap:9px;font:800 1rem/1 "Bricolage Grotesque",system-ui,sans-serif;letter-spacing:-.01em}
+.brand{flex:none;white-space:nowrap;display:inline-flex;align-items:center;gap:9px;font:800 1rem/1 "Bricolage Grotesque",system-ui,sans-serif;letter-spacing:-.01em}
 .logo{flex:none;width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:linear-gradient(135deg,#ff5c85,#8b6bff);box-shadow:0 6px 16px -4px #ff5c8599}
 .logo svg{width:17px;height:17px;fill:#fff}
 
 /* ====== Botón de cuenta ====== */
-.accbtn{display:inline-flex;align-items:center;gap:8px;height:40px;max-width:60%;padding:0 16px 0 13px;border-radius:99px;border:1px solid #3a3270;background:#ffffff0a;color:var(--fg);font:600 .9rem "DM Sans",system-ui,sans-serif;cursor:pointer;transition:background .2s,border-color .2s,transform .15s}
+.accbtn{display:inline-flex;align-items:center;gap:8px;height:40px;min-width:0;max-width:60%;padding:0 16px 0 13px;border-radius:99px;border:1px solid #3a3270;background:#ffffff0a;color:var(--fg);font:600 .9rem "DM Sans",system-ui,sans-serif;cursor:pointer;transition:background .2s,border-color .2s,transform .15s}
 .accbtn:hover{background:#ffffff14;border-color:#ffffff40}
 .accbtn:active{transform:scale(.97)}
 .accbtn svg{flex:none;width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
@@ -357,5 +358,13 @@ h1 em{font-style:normal;background:linear-gradient(100deg,#ff5c85 10%,#b07bff 90
 .side .bar{margin-bottom:34px}
 .side .top{gap:24px}
 h1{font-size:3.1rem}
-.accbtn{max-width:170px}
+.accbtn{max-width:none}
 }
+
+/* ====== Etiquetas de la tarjeta: una fila que se acomoda sola (favorita, fecha, próximamente) ====== */
+.tags{position:absolute;z-index:2;top:44px;left:10px;right:10px;display:flex;flex-wrap:wrap;align-items:center;gap:5px;pointer-events:none}
+.tags:empty{display:none}
+.tags>.fvs,.tags>.when,.tags>.soon{position:static;inset:auto;margin:0}
+.tags>.fvs{width:24px;height:24px}
+.tags>.when{font-size:.72rem;line-height:1.5;padding:1px 9px}
+.tags>.soon{border-radius:99px;padding:2px 9px;font-size:.62rem;line-height:1.5;box-shadow:0 2px 8px #0008}
