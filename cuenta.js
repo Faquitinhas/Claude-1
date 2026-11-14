@@ -110,8 +110,8 @@ h=`<button type="button" class="mx" data-close aria-label="Cerrar">×</button>
 <div class="mhd"><div class="mic">${IC.cloud}</div><h2 id="moT">${reg?"Creá tu cuenta":"Iniciá sesión"}</h2><p>${reg?"Guardá tu maratón y seguilo desde cualquier dispositivo.":"Retomá tu maratón donde lo dejaste."}</p></div>
 <div class="mtabs" role="tablist" aria-label="Tipo de acceso"><button type="button" role="tab" data-m="login" aria-selected="${!reg}">Iniciar sesión</button><button type="button" role="tab" data-m="register" aria-selected="${reg}">Crear cuenta</button></div>
 <form id="mF" novalidate>
-${fld("mU","Usuario","text",mF.u,"username",'autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="20" placeholder="tu_usuario"'+(reg?' aria-describedby="mUh"':""))}
-${reg?`<small class="fh" id="mUh">3 a 20 caracteres: letras, números, punto, guion o guion bajo.</small>`:""}
+${fld("mU","Usuario","text",mF.u,"username",'autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="40" placeholder="tu_usuario"'+(reg?' aria-describedby="mUh"':""))}
+${reg?`<small class="fh" id="mUh">Sin espacios ni tildes. Podés usar letras, números, punto, guion, guion bajo o @.</small>`:""}
 ${fld("mP","Contraseña","password",mF.p,reg?"new-password":"current-password",'maxlength="100" placeholder="'+(reg?"Mínimo 6 caracteres":"••••••••")+'"')}
 ${reg?fld("mP2","Repetí la contraseña","password",mF.p2,"new-password",'maxlength="100"'):""}
 ${err}

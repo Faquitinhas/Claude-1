@@ -34,7 +34,8 @@ const write = (user, doc, opt) => put(pathOf(user), JSON.stringify(doc), {
 
 function cleanUser(u) {
   u = String(u || "").trim().toLowerCase();
-  if (!/^[a-z0-9_.-]{3,20}$/.test(u)) throw new Fail(400, "El usuario tiene que tener entre 3 y 20 caracteres: letras, números, punto, guion o guion bajo.");
+  if (/\s/.test(u)) throw new Fail(400, "El usuario no puede tener espacios. Usá por ejemplo juan_perez.");
+  if (!/^[a-z0-9_.@+-]{3,40}$/.test(u)) throw new Fail(400, "El usuario tiene que tener entre 3 y 40 caracteres, sin tildes ni ñ: letras, números, punto, guion, guion bajo o @.");
   return u;
 }
 function cleanPass(p) {
@@ -131,4 +132,15 @@ async function act(body) {
     return { status: 500, body: { error: "No se pudo completar la operación. Probá de nuevo en un rato." } };
   }
 }
-module.exports = { act };
+// Chequeo del almacenamiento: escribe y lee un archivo de prueba.
+async function health() {
+  try {
+    await put("health/ping.json", JSON.stringify({ t: Date.now() }), { access: "private", contentType: "application/json", addRandomSuffix: false, allowOverwrite: true });
+    const r = await get("health/ping.json", { access: "private", useCache: false });
+    return { status: 200, body: { ok: !!(r && r.statusCode === 200) } };
+  } catch (e) {
+    console.error("cuenta health:", e);
+    return { status: 500, body: { ok: false, error: String(e && e.message || e).slice(0, 200) } };
+  }
+}
+module.exports = { act, health };
