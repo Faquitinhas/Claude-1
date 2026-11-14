@@ -170,7 +170,7 @@ const j=await r.json(),b=(j.results||[]).find(x=>x.backdrop_path);BN[n]=b?"https
 if(cur===n&&vt==="info")draw()}
 function loadPosters(){
 const st=$("st"),all=Object.keys(W),need=all.filter(n=>!wk[n]);
-const show=()=>st.textContent="Pósters cargados: "+all.filter(n=>wk[n]).length+" de "+all.length;
+const show=()=>{const k=all.filter(n=>wk[n]).length;st.textContent=k<all.length?"Cargando pósters… "+k+" de "+all.length:""};
 show();if(!need.length)return;
 const T=n=>W[n].replace(/_/g," ");
 const run=ch=>fetch("https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&redirects=1&prop=pageimages&piprop=thumbnail&pithumbsize=900&pilicense=any&titles="+encodeURIComponent(ch.map(T).join("|"))).then(r=>r.json()).then(j=>{
@@ -179,7 +179,7 @@ const q=j.query||{},nm={},rd={},byT={};
 Object.values(q.pages||{}).forEach(p=>{if(p.thumbnail)byT[p.title]=p.thumbnail.source});
 ch.forEach(n=>{let t=T(n);t=nm[t]||t;t=rd[t]||t;const u=byT[t];if(u){wk[n]=u;setImg(n,u)}})});
 const ch=[];for(let i=0;i<need.length;i+=40)ch.push(need.slice(i,i+40));
-Promise.all(ch.map(run)).then(()=>{sv("ucm-wiki2",wk);show()}).catch(e=>{st.textContent="No se pudo conectar con Wikipedia ("+e.message+")"})}
+Promise.all(ch.map(run)).then(()=>{sv("ucm-wiki2",wk);show()}).catch(e=>{st.textContent="No se pudieron cargar algunos pósters. Probá recargar la página más tarde."})}
 
 const $=id=>document.getElementById(id),esc=s=>s.replace(/"/g,"&quot;");
 $("seg").innerHTML=D.map((p,i)=>p[2]?"":`<div style="flex:${p[1].length}"><i id="s${i}" style="background:hsl(${HUES[i]} 75% 58%)"></i></div>`).join("");
@@ -195,7 +195,9 @@ const sg=$("s"+i);sg.style.width=(l.length?d/l.length*100:0)+"%";sg.parentNode.s
 });
 const pc=total?done/total:0;
 $("pc").textContent=Math.round(pc*100);$("rg").style.strokeDashoffset=314.2*(1-pc);
-$("sub").textContent=total&&done===total?"Las viste todas. Maratón completo.":`Llevás ${done} de ${total}. Te faltan ${total-done}.`;
+// minutos de películas (no series) que faltan ver, para mostrar cuánto queda
+let rest=0;if(typeof R!=="undefined")D.forEach(([,ms,ex])=>{if(!ex)ms.forEach(m=>{if(vis(m)&&!m[2]&&!seen[m[0]]&&!isSoon(m[0]))rest+=R[m[0]]||0})});
+$("sub").innerHTML=total&&done===total?"<b>¡Las viste todas!</b> Maratón completo.":`<b>${done}</b> de ${total} vistas${rest?` · te quedan <b>~${Math.round(rest/60)} h</b> de películas`:""}`;
 $("xst").innerHTML=XT<0?"":`Extra X-Men: <b>${xd} de ${xl}</b>${xl&&xd===xl?" · ¡completo!":""}`;
 nextUp();planUpd();
 }
