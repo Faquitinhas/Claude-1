@@ -15,7 +15,7 @@ const fmtD=d=>d.toLocaleDateString("es-AR",{day:"numeric",month:"long",year:"num
 const HUES=[350,28,48,160,215,275,195];
 let seen={},pos={},tab=0,QT={},SS=true,flt="all",qq="";
 const ld=k=>{try{return JSON.parse(localStorage.getItem(k))||{}}catch(e){return{}}};
-const sv=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}};
+const sv=(k,v)=>{let ok=true;try{localStorage.setItem(k,JSON.stringify(v))}catch(e){ok=false}if(typeof onSave==="function")onSave(k);return ok}; // onSave: sincroniza con la cuenta (cuenta.js)
 seen=ld("ucm-vistas");pos=ld("ucm-posters");QT=ld("ucm-quitadas");try{SS=localStorage.getItem("ucm-series")!=="0";const t=+localStorage.getItem("ucm-tab");if(t>=0&&t<D.length)tab=t}catch(e){}
 let fav=ld("ucm-fav-v2").n||null,fbusy=false;
 const MON={

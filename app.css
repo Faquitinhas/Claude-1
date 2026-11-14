@@ -239,3 +239,21 @@ details.box summary{cursor:pointer;margin:0}
 .cday{min-height:108px;padding:7px}
 .ch{font-size:.76rem}
 }
+
+/* ====== Cuenta ====== */
+.acc{margin-top:18px}
+.acc .nxt{margin-top:0}
+.acb{display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:var(--card)}
+form.acb{margin-top:10px}
+.acb>span{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--mut)}
+.acb>b{font:800 1.05rem/1.2 Syne,system-ui,sans-serif;word-break:break-all;margin-top:-6px}
+.acb small{color:var(--mut);font-size:.85rem}
+.acb .nt{margin:0}
+.acb label{display:flex;flex-direction:column;gap:4px;font-size:.8rem;color:var(--mut)}
+.acb input{padding:9px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--fg);font:inherit;min-width:0}
+.acr{display:flex;flex-wrap:wrap;gap:8px}
+.acb button{padding:8px 14px;border-radius:99px;border:1px solid var(--line);background:transparent;color:var(--fg);font:500 .9rem "DM Sans",system-ui,sans-serif;cursor:pointer}
+.acb button.pri{background:linear-gradient(135deg,#ff5c85,#8b6bff);border-color:transparent;color:#fff}
+.acb button.del{border-color:#ff5c85;color:#ff8fa9;align-self:flex-start}
+.acb button:disabled{opacity:.5;cursor:default}
+#acDF{display:flex;flex-direction:column;gap:8px}

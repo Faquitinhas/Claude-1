@@ -27,6 +27,7 @@
 <button class="nxt" id="nxt" hidden></button>
 <button class="nxt pln" id="pln" hidden></button>
 <label class="sw"><input type="checkbox" id="shs"> Mostrar series</label>
+<div class="acc" id="acc"></div>
 </aside>
 <section class="content">
 <div class="vw" role="tablist" aria-label="Vista"><button role="tab" id="vbP" aria-selected="true">Películas</button><button role="tab" id="vbC" aria-selected="false">Calendario</button></div>
@@ -39,7 +40,8 @@
 <p class="hint">Tocá una película para marcarla y la i para ver detalles o elegir qué día la ves.<button id="reset">Reiniciar</button></p>
 <p class="hint" id="st"></p>
 <details class="gd" id="gd"><summary>¿Cómo guardo mi progreso?</summary><div class="gdb">
-<p>Tus películas vistas, los puntajes que enviaste, tu favorita y las fechas del calendario se guardan <b>solo en este navegador</b>. Si abrís la página en otro celular o computadora, o si borrás los datos del navegador, empezás de cero. Para pasar tu progreso a otro dispositivo:</p>
+<p><b>Lo más fácil: creá una cuenta</b> (en “Cuenta”, con usuario y contraseña). Tu progreso, puntajes, favorita y fechas del calendario se guardan solos y aparecen en cualquier dispositivo donde inicies sesión.</p>
+<p>Sin cuenta, tus películas vistas, los puntajes que enviaste, tu favorita y las fechas del calendario se guardan <b>solo en este navegador</b>. Si abrís la página en otro celular o computadora, o si borrás los datos del navegador, empezás de cero. Para pasar tu progreso a otro dispositivo sin cuenta:</p>
 <ol><li>Tocá <b>Copiar enlace de progreso</b> y mandátelo (WhatsApp, notas, mail).</li><li>Abrí ese enlace en el otro dispositivo y aceptá cargar el progreso.</li></ol>
 <p class="nt">El enlace lleva vistas, puntajes y favorita. Las fechas del calendario no viajan: quedan en el dispositivo donde las pusiste (o en Mi Agenda, si las mandaste).</p>
 <div class="ac"><button id="cpl">Copiar enlace de progreso</button></div>
@@ -78,5 +80,6 @@
 <div class="ov" id="ov" hidden><div class="sheet" id="sh" role="dialog" aria-modal="true"><div id="sb"></div></div></div>
 <script src="app.js"></script>
 <script src="plan.js"></script>
+<script src="cuenta.js"></script>
 </body>
 </html>
