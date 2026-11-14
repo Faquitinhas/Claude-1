@@ -155,9 +155,17 @@ const logoOf=n=>{const pl=plat(n);if(!LOGO[pl])return`<span class="pl"><b class=
 const PL={"Daredevil":"Netflix","Spider-Man: Homecoming":"Varía según el país","Spider-Man: Lejos de casa":"Varía según el país","Spider-Man: No Way Home":"Varía según el país","Spider-Man: Brand New Day":"Varía según el país"},plat=n=>PL[n]||"Disney+";
 const vis=m=>!QT[m[0]]&&(SS||!m[2]);
 const W={"Iron Man":"Iron_Man_(2008_film)","El Increíble Hulk":"The_Incredible_Hulk_(film)","Iron Man 2":"Iron_Man_2","Thor":"Thor_(film)","Capitán América: El primer vengador":"Captain_America:_The_First_Avenger","Los Vengadores":"The_Avengers_(2012_film)","Iron Man 3":"Iron_Man_3","Thor: El mundo oscuro":"Thor:_The_Dark_World","Capitán América: El soldado de invierno":"Captain_America:_The_Winter_Soldier","Guardianes de la Galaxia":"Guardians_of_the_Galaxy_(film)","Vengadores: La era de Ultrón":"Avengers:_Age_of_Ultron","Ant-Man":"Ant-Man_(film)","Capitán América: Civil War":"Captain_America:_Civil_War","Doctor Strange":"Doctor_Strange_(2016_film)","Guardianes de la Galaxia Vol. 2":"Guardians_of_the_Galaxy_Vol._2","Spider-Man: Homecoming":"Spider-Man:_Homecoming","Thor: Ragnarok":"Thor:_Ragnarok","Black Panther":"Black_Panther_(film)","Vengadores: Infinity War":"Avengers:_Infinity_War","Ant-Man y la Avispa":"Ant-Man_and_the_Wasp","Capitana Marvel":"Captain_Marvel_(film)","Vengadores: Endgame":"Avengers:_Endgame","Spider-Man: Lejos de casa":"Spider-Man:_Far_From_Home","Viuda Negra":"Black_Widow_(2021_film)","Shang-Chi":"Shang-Chi_and_the_Legend_of_the_Ten_Rings","Eternals":"Eternals_(film)","Spider-Man: No Way Home":"Spider-Man:_No_Way_Home","Doctor Strange en el multiverso de la locura":"Doctor_Strange_in_the_Multiverse_of_Madness","Thor: Love and Thunder":"Thor:_Love_and_Thunder","Black Panther: Wakanda Forever":"Black_Panther:_Wakanda_Forever","Ant-Man y la Avispa: Quantumanía":"Ant-Man_and_the_Wasp:_Quantumania","Guardianes de la Galaxia Vol. 3":"Guardians_of_the_Galaxy_Vol._3","The Marvels":"The_Marvels","Deadpool & Wolverine":"Deadpool_&_Wolverine","Capitán América: Brave New World":"Captain_America:_Brave_New_World","Thunderbolts*":"Thunderbolts*","Los 4 Fantásticos: Primeros pasos":"The_Fantastic_Four:_First_Steps","Spider-Man: Brand New Day":"Spider-Man:_Brand_New_Day","Avengers: Doomsday":"Avengers:_Doomsday","Avengers: Secret Wars":"Avengers:_Secret_Wars","X-Men":"X-Men_(film)","X-Men 2":"X2_(film)","X-Men: La batalla final":"X-Men:_The_Last_Stand","X-Men orígenes: Wolverine":"X-Men_Origins:_Wolverine","X-Men: Primera generación":"X-Men:_First_Class","Wolverine: Inmortal":"The_Wolverine_(film)","X-Men: Días del futuro pasado":"X-Men:_Days_of_Future_Past","Deadpool":"Deadpool_(film)","X-Men: Apocalipsis":"X-Men:_Apocalypse","Logan":"Logan_(film)","Deadpool 2":"Deadpool_2","X-Men: Fénix Oscura":"Dark_Phoenix_(film)","Los nuevos mutantes":"The_New_Mutants_(film)","WandaVision":"WandaVision","The Falcon and the Winter Soldier":"The_Falcon_and_the_Winter_Soldier","Loki":"Loki_(TV_series)","What If...?":"What_If...?_(TV_series)","Hawkeye":"Hawkeye_(miniseries)","Moon Knight":"Moon_Knight_(miniseries)","Ms. Marvel":"Ms._Marvel_(miniseries)","She-Hulk: Attorney at Law":"She-Hulk:_Attorney_at_Law","I Am Groot":"I_Am_Groot","Secret Invasion":"Secret_Invasion_(miniseries)","Echo":"Echo_(miniseries)","Agatha All Along":"Agatha_All_Along","Daredevil: Born Again":"Daredevil:_Born_Again","Daredevil":"Daredevil_(TV_series)","Ironheart":"Ironheart_(miniseries)","Eyes of Wakanda":"Eyes_of_Wakanda","Marvel Zombies":"Marvel_Zombies_(miniseries)","VisionQuest":"VisionQuest","The Punisher: One Last Kill":"The_Punisher:_One_Last_Kill"};
-let wk=ld("ucm-wiki2");
+let wk=ld("ucm-wiki3");try{localStorage.removeItem("ucm-wiki2")}catch(e){}
 const cu=u=>'url("'+String(u).replace(/["\\]/g,"\\$&").replace(/[\n\r]/g,"")+'")'; // url() de CSS segura: las URLs de Wikipedia traen paréntesis
-function setImg(n,u){document.querySelectorAll(".card").forEach(c=>{if(c.dataset.n===n&&!pos[n]){c.style.backgroundImage=cu(u);c.classList.add("img");fitCard(c,u)}})}
+// Un póster recién se muestra cuando la imagen cargó de verdad. Si falla (Wikipedia a veces la rechaza),
+// la tarjeta queda con el título a la vista en vez de quedar vacía, y se reintenta una vez.
+const OK={},BAD={},TRY={};
+function paint(n,u){document.querySelectorAll(".card").forEach(c=>{if(c.dataset.n===n&&(pos[n]||wk[n])===u){c.style.backgroundImage=cu(u);c.classList.add("img");fitCard(c,u)}})}
+function want(n,u){if(!u||BAD[u])return;if(OK[u]){paint(n,u);return}if(TRY[u]===1)return;TRY[u]=1;
+const im=new Image();im.onload=()=>{OK[u]=1;DIM[u]=[im.naturalWidth,im.naturalHeight];paint(n,u)};
+im.onerror=()=>{if(!TRY[u+"#r"]){TRY[u+"#r"]=1;TRY[u]=0;setTimeout(()=>want(n,u),2500);return}
+BAD[u]=1;if(wk[n]===u){delete wk[n];sv("ucm-wiki3",wk)}};im.src=u}
+function setImg(n,u){if(!pos[n])want(n,u)}
 const DIM={};
 function fitCard(c,u){if(!u)return;const ap=()=>{const d=DIM[u];if(!d)return;const r=d[0]/d[1];if(Math.abs(r-2/3)>.08){c.classList.add("fit");c.style.setProperty("--pi",cu(u))}else{c.classList.remove("fit");c.style.removeProperty("--pi")}};
 if(DIM[u]){ap();return}const im=new Image();im.onload=()=>{DIM[u]=[im.naturalWidth,im.naturalHeight];ap()};im.src=u}
@@ -174,13 +182,13 @@ const st=$("st"),all=Object.keys(W),need=all.filter(n=>!wk[n]);
 const show=()=>{const k=all.filter(n=>wk[n]).length;st.textContent=k<all.length?"Cargando pósters… "+k+" de "+all.length:""};
 show();if(!need.length)return;
 const T=n=>W[n].replace(/_/g," ");
-const run=ch=>fetch("https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&redirects=1&prop=pageimages&piprop=thumbnail&pithumbsize=900&pilicense=any&titles="+encodeURIComponent(ch.map(T).join("|"))).then(r=>r.json()).then(j=>{
+const run=ch=>fetch("https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&redirects=1&prop=pageimages&piprop=thumbnail&pithumbsize=500&pilicense=any&titles="+encodeURIComponent(ch.map(T).join("|"))).then(r=>r.json()).then(j=>{
 const q=j.query||{},nm={},rd={},byT={};
 (q.normalized||[]).forEach(x=>nm[x.from]=x.to);(q.redirects||[]).forEach(x=>rd[x.from]=x.to);
 Object.values(q.pages||{}).forEach(p=>{if(p.thumbnail)byT[p.title]=p.thumbnail.source});
 ch.forEach(n=>{let t=T(n);t=nm[t]||t;t=rd[t]||t;const u=byT[t];if(u){wk[n]=u;setImg(n,u)}})});
 const ch=[];for(let i=0;i<need.length;i+=40)ch.push(need.slice(i,i+40));
-Promise.all(ch.map(run)).then(()=>{sv("ucm-wiki2",wk);show()}).catch(e=>{st.textContent="No se pudieron cargar algunos pósters. Probá recargar la página más tarde."})}
+Promise.all(ch.map(run)).then(()=>{sv("ucm-wiki3",wk);show()}).catch(e=>{st.textContent="No se pudieron cargar algunos pósters. Probá recargar la página más tarde."})}
 
 const $=id=>document.getElementById(id),esc=s=>s.replace(/"/g,"&quot;");
 $("seg").innerHTML=D.map((p,i)=>p[2]?"":`<div style="flex:${p[1].length}"><i id="s${i}" style="background:hsl(${HUES[i]} 75% 58%)"></i></div>`).join("");
@@ -217,9 +225,9 @@ const x=$("xin");x.style.setProperty("--h",HUES[tab]);
 x.innerHTML=D[tab][2]?`<div class="xin"><small>Apartado extra</small><b>La saga X-Men</b><p>Las películas de mutantes de 20th Century Fox, en orden de estreno. No son parte del UCM, así que no cuentan para tu porcentaje, pero conectan con él a través de Deadpool &amp; Wolverine.</p></div>`:"";
 const qn=qq.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
 const all=D[tab][1].filter(vis),list=all.filter(m=>(flt==="all"||(flt==="seen")===!!seen[m[0]])&&(!qn||m[0].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").includes(qn)));
-g.innerHTML=list.map(m=>{const n=m[0],p=pos[n]||wk[n];
+g.innerHTML=list.map(m=>{const n=m[0],q=pos[n]||wk[n],p=q&&OK[q]?q:"";
 return `<div class="cell"><div class="card ${seen[n]?"done":""} ${p?"img":""}" role="checkbox" aria-checked="${!!seen[n]}" aria-label="${esc(n)}" tabindex="0" data-n="${esc(n)}"${p?` style="background-image:${esc(cu(p))}"`:""}><span class="yr">${m[1]}${m[2]?" · Serie":""}</span><span class="nm">${n}</span><span class="stamp">vista</span><span class="tags">${fav===n?'<span class="fvs" aria-label="Favorita"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 2.7 4.5 6.4 4.5c2.1 0 3.9 1.2 5.6 3.2 1.7-2 3.5-3.2 5.6-3.2 3.7 0 5.5 3.9 4 7.3C19.5 16.4 12 21 12 21z"/></svg></span>':""}${whenBadge(n)}${isSoon(n)?'<span class="soon">Próximamente</span>':""}</span></div><button class="inf" data-n="${esc(n)}" aria-label="Detalles">i</button></div>`}).join("")||`<p class="empty">${all.length?(qn?"Ninguna coincide con la búsqueda.":flt==="seen"?"Todavía no marcaste ninguna de esta fase.":"¡Las viste todas en esta fase!"):"No hay nada para mostrar en esta fase."}</p>`;
-fitAll();
+fitAll();list.forEach(m=>{const n=m[0],q=pos[n]||wk[n];if(q&&!OK[q])want(n,q)});
 }
 function setSeen(n,v){if(v)seen[n]=true;else delete seen[n];sv("ucm-vistas",seen);const c=cardOf(n);if(c){c.classList.toggle("done",!!v);c.setAttribute("aria-checked",!!v)}stats();if(flt!=="all")setTimeout(grid,450)}
 function toggle(c){setSeen(c.dataset.n,!seen[c.dataset.n])}

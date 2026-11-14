@@ -106,6 +106,8 @@ const actions = {
     const data = cleanData(b.data);
     for (let i = 0; ; i++) {
       const { doc, etag } = await auth(b.token);
+      // Si otro dispositivo guardó después de la última vez que este sincronizó, devolvemos lo de la cuenta para mezclar.
+      if (typeof b.base === "number" && (doc.u || 0) > b.base) return { conflict: true, data: doc.data || {}, u: doc.u || 0 };
       doc.data = data; doc.u = Math.max(Date.now(), (doc.u || 0) + 1);
       try { await write(doc.user, doc, { allowOverwrite: true, ifMatch: etag }); return { u: doc.u }; }
       catch (e) { if (!(e instanceof BlobPreconditionFailedError) || i >= 2) throw e; }

@@ -5,7 +5,7 @@ let acct=ld("ucm-cuenta"),applying=false,pushT=0,syncing=false,sync={k:"ok",t:"P
 // estado de la ventana
 let mOpen=false,mMode="login",mErr="",mBusy=false,mPw=false,mF={u:"",p:"",p2:""},mMerge=null,mBack=null;
 const obj=x=>x&&typeof x==="object"&&!Array.isArray(x)?x:{};
-const collect=()=>({seen,sent,fav:fav||"",qt:QT,plan});
+const collect=()=>JSON.parse(JSON.stringify({seen,sent,fav:fav||"",qt:QT,plan})); // copia, no referencias vivas
 const isEmpty=d=>!Object.keys(obj(d.seen)).length&&!Object.keys(obj(d.sent)).length&&!d.fav&&!Object.keys(obj(d.qt)).length&&!Object.keys(obj(d.plan)).length;
 const saveAcct=()=>sv("ucm-cuenta",acct);
 const canon=x=>x&&typeof x==="object"?Object.keys(x).sort().map(k=>JSON.stringify(k)+":"+canon(x[k])).join(","):JSON.stringify(x);
@@ -18,7 +18,7 @@ if(!r.ok||!j||!j.ok){const x=new Error(j&&j.error||"No se pudo conectar con el s
 return j}
 
 // Reemplaza el progreso de este dispositivo por el que viene de la cuenta
-function applyData(d){d=obj(d);applying=true;
+function applyData(d){d=JSON.parse(JSON.stringify(obj(d)));applying=true;
 try{seen=obj(d.seen);sent=obj(d.sent);QT=obj(d.qt);fav=typeof d.fav==="string"&&d.fav?d.fav:null;
 const p=obj(d.plan);plan={};for(const n of Object.keys(p)){const w=p[n];if(ALL.includes(n)&&w&&/^\d{4}-\d\d-\d\d$/.test(w.d||""))plan[n]={d:w.d,t:/^\d\d:\d\d$/.test(w.t||"")?w.t:""}}
 sv("ucm-vistas",seen);sv("ucm-enviados-v2",sent);sv("ucm-quitadas",QT);sv("ucm-fav-v2",{n:fav});sv("ucm-plan",plan)}
@@ -32,23 +32,33 @@ function toast(t){const e=$("toast");e.textContent=t;e.classList.add("on");clear
 // ----- sincronización -----
 function stat(k,t){sync={k,t};btnDraw();if(mOpen&&mMode==="account"){const e=$("mSync");if(e){e.className="sync "+k;e.lastChild.textContent=t}}}
 function expired(){clearTimeout(pushT);acct={};saveAcct();btnDraw();mErr="Tu sesión venció. Volvé a iniciar sesión.";openM("login")}
+// Mezcla de tres vías: parte de lo que hay en la cuenta y le aplica solo lo que cambió en este dispositivo
+// desde la última sincronización. Así un celular desactualizado no borra lo que marcaste en la compu.
+function merge3(base,loc,srv){base=obj(base);srv=obj(srv);const out={};
+for(const k of ["seen","sent","qt","plan"]){const b=obj(base[k]),l=obj(loc[k]),o={...obj(srv[k])};
+for(const n of new Set([...Object.keys(b),...Object.keys(l)]))if(canon(l[n])!==canon(b[n])){if(n in l)o[n]=l[n];else delete o[n]}
+out[k]=o}
+out.fav=(loc.fav||"")!==(base.fav||"")?loc.fav:(srv.fav||"");return out}
 async function push(){
 if(!acct.token)return;clearTimeout(pushT);
 if(syncing){pushT=setTimeout(push,800);return}
 syncing=true;stat("busy","Guardando…");
-try{acct.dirty=false;const r=await api({action:"save",token:acct.token,data:collect()});
-acct.u=r.u;saveAcct();acct.dirty?stat("busy","Guardando…"):stat("ok","Progreso guardado en tu cuenta")}
+try{for(let i=0;i<3;i++){
+acct.dirty=false;const data=collect(),r=await api({action:"save",token:acct.token,data,base:acct.u||0});
+if(r.conflict){applyData(merge3(acct.base,data,r.data));acct.u=r.u;acct.base=r.data;acct.dirty=true;saveAcct();continue}
+acct.u=r.u;acct.base=data;saveAcct();break}
+acct.dirty?stat("busy","Guardando…"):stat("ok","Progreso guardado en tu cuenta")}
 catch(e){acct.dirty=true;saveAcct();
 if(e.status===401){syncing=false;expired();return}
 stat("off",e.net?"Sin conexión: se guarda cuando vuelva":"No se pudo guardar, se reintenta solo")}
-syncing=false}
+syncing=false;if(acct.dirty&&acct.token)pushT=setTimeout(push,1500)}
 async function pull(){
 if(!acct.token||syncing)return;
 if(acct.dirty)return push();
 syncing=true;
 try{const r=await api({action:"get",token:acct.token});
 if(acct.dirty){syncing=false;return push()} // cambió algo mientras esperábamos: gana lo local
-if(r.u>(acct.u||0)){acct.u=r.u;saveAcct();applyData(r.data)}
+if(r.u>(acct.u||0)){acct.u=r.u;acct.base=r.data;saveAcct();applyData(r.data)}
 stat("ok","Progreso guardado en tu cuenta")}
 catch(e){if(e.status===401){syncing=false;expired();return}
 stat("off",e.net?"Sin conexión: usando lo de este dispositivo":"No se pudo consultar tu cuenta")}
@@ -66,10 +76,10 @@ if(reg&&pass!==mF.p2){mErr="Las contraseñas no coinciden.";mDraw();focusSel("#m
 mBusy=true;mErr="";mDraw();
 try{
 if(reg){const r=await api({action:"register",user,pass,data:collect()});
-acct={user:r.user,token:r.token,u:r.u};saveAcct();stat("ok","Progreso guardado en tu cuenta");
+acct={user:r.user,token:r.token,u:r.u,base:collect()};saveAcct();stat("ok","Progreso guardado en tu cuenta");
 done("¡Listo, "+r.user+"! Tu progreso ya se guarda en tu cuenta.")}
 else{const r=await api({action:"login",user,pass}),local=collect(),srv=obj(r.data);
-acct={user:r.user,token:r.token,u:r.u};saveAcct();stat("ok","Progreso guardado en tu cuenta");
+acct={user:r.user,token:r.token,u:r.u,base:srv};saveAcct();stat("ok","Progreso guardado en tu cuenta");
 if(isEmpty(local)||canon(local)===canon({seen:obj(srv.seen),sent:obj(srv.sent),fav:srv.fav||"",qt:obj(srv.qt),plan:obj(srv.plan)})){applyData(srv);done("Hola de nuevo, "+r.user+". Cargamos tu progreso.")}
 else if(isEmpty(srv)){push();done("Hola, "+r.user+". Guardamos en tu cuenta lo que tenías acá.")}
 else{mBusy=false;mMerge={local,srv};mMode="merge";mDraw()}}}
