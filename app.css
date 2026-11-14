@@ -163,3 +163,79 @@ main{max-width:1320px;padding:44px 48px 72px;display:grid;grid-template-columns:
 main{max-width:1560px;grid-template-columns:340px minmax(0,1fr)}
 .grid{grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}
 }
+
+/* ====== Vista: películas / calendario ====== */
+[hidden]{display:none!important}
+.vw{display:flex;gap:4px;padding:4px;background:var(--card);border:1px solid var(--line);border-radius:99px;width:fit-content;margin:22px 0 0}
+.vw button{border:0;background:transparent;color:var(--mut);font:500 .95rem "DM Sans",system-ui,sans-serif;padding:8px 18px;border-radius:99px;cursor:pointer}
+.vw button[aria-selected="true"]{background:linear-gradient(135deg,#ff5c85,#8b6bff);color:#fff}
+#vCal{margin-top:20px}
+a:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--stamp);outline-offset:2px}
+input[type=date],input[type=time],select{background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font:inherit;font-size:.95rem;color-scheme:dark;min-width:0}
+input:disabled{opacity:.45}
+.btn{display:inline-block;padding:9px 15px;border-radius:99px;border:1px solid var(--line);background:transparent;color:var(--fg);font:500 .92rem "DM Sans",system-ui,sans-serif;text-decoration:none;cursor:pointer}
+.btn.pri{background:linear-gradient(135deg,#ff5c85,#8b6bff);border-color:transparent;color:#fff}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.when{position:absolute;z-index:2;top:36px;left:10px;font-size:.72rem;font-weight:500;background:#000c;border-radius:99px;padding:2px 9px;white-space:nowrap}
+.fvs~.when{left:44px;top:38px}
+.when-ed{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin:10px 0 4px}
+.when-ed label,.ap label{display:flex;flex-direction:column;gap:4px;font-size:.8rem;color:var(--mut)}
+.nxt.pln{margin-top:10px;border-color:#8b6bff66;background:linear-gradient(120deg,#8b6bff22,transparent 75%),var(--card)}
+.calh{display:flex;align-items:center;gap:10px;margin:0 0 12px}
+.calh h2{flex:1;margin:0;font:800 1.5rem Syne,system-ui,sans-serif;text-transform:capitalize}
+.calh button{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:transparent;color:var(--fg);font-size:1.2rem;cursor:pointer}
+.calh .hoy{width:auto;border-radius:99px;padding:0 14px;font:500 .9rem "DM Sans",system-ui,sans-serif}
+.cal{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.dw,.cg{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}
+.dw span{padding:8px 4px;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);text-align:center;border-bottom:1px solid var(--line)}
+.cday{min-height:88px;border:0;border-right:1px solid var(--line);border-bottom:1px solid var(--line);background:transparent;color:var(--fg);padding:5px;display:flex;flex-direction:column;gap:3px;align-items:stretch;text-align:left;cursor:pointer;min-width:0;font:inherit}
+.cday:nth-child(7n){border-right:0}
+.cday.blank{cursor:default}
+.cday:not(.blank):hover{background:#ffffff08}
+.cday.past .dn{opacity:.45}
+.cday.sel{background:#ff5c8514;box-shadow:inset 0 0 0 2px var(--stamp)}
+.dn{font-size:.8rem;width:24px;height:24px;display:grid;place-items:center;border-radius:50%;flex:none}
+.cday.today .dn{background:var(--fg);color:var(--bg);font-weight:700}
+.chs{display:flex;flex-direction:column;gap:3px;min-width:0}
+.ch{display:flex;gap:4px;align-items:center;font-size:.7rem;line-height:1.25;padding:2px 5px;border-radius:5px;background:hsl(var(--h) 70% 50% / .22);border-left:3px solid hsl(var(--h) 75% 60%);min-width:0}
+.ch span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ch time{color:var(--mut);flex:none}
+.ch.ok span{text-decoration:line-through;opacity:.6}
+.ch.rel{--h:48;color:#ffd75a}
+.box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-top:16px}
+.box h4,details.box summary{margin:0 0 4px;font:700 1.05rem Syne,system-ui,sans-serif}
+details.box summary{cursor:pointer;margin:0}
+.box .cd{margin:10px 0 0}
+.dph{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.dph h3{margin:0;font:800 1.2rem Syne,system-ui,sans-serif}
+.dph h3::first-letter{text-transform:uppercase}
+.dph span{color:var(--mut);font-size:.9rem}
+.fl{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+.fl li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 10px;border-radius:10px;background:var(--bg);border-left:4px solid hsl(var(--h) 75% 60%)}
+.fl b{display:block;font-weight:500;line-height:1.25}
+.fl small{color:var(--mut)}
+.rm{width:32px;height:32px;border-radius:50%;border:0;background:var(--line);color:var(--fg);cursor:pointer;font-size:1.1rem}
+.add{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.add select{flex:1 1 200px}
+.ap{display:flex;flex-wrap:wrap;gap:12px;margin:14px 0 10px}
+.wds{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 12px}
+.wds button{width:40px;height:34px;border-radius:9px;border:1px solid var(--line);background:transparent;color:var(--fg);cursor:pointer;font:600 .85rem "DM Sans",sans-serif}
+.wds button[aria-pressed="true"]{background:var(--stamp);border-color:transparent;color:#fff}
+.lbl{font-size:.8rem;color:var(--mut)}
+.chk{display:flex;gap:8px;align-items:center;font-size:.92rem;margin:6px 0}
+.chk input{width:18px;height:18px;accent-color:var(--stamp)}
+#scode{display:block;width:100%;box-sizing:border-box;margin-top:10px;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:8px;font:12px/1.4 ui-monospace,monospace;height:72px;resize:none}
+@media (max-width:560px){
+.cday{min-height:56px;align-items:center;padding:4px 2px}
+.chs{flex-direction:row;flex-wrap:wrap;justify-content:center}
+.ch{width:8px;height:8px;padding:0;border:0;border-radius:50%;background:hsl(var(--h) 75% 60%)}
+.ch span,.ch time{display:none}
+.fl li{grid-template-columns:minmax(0,1fr) auto}
+.fl li input{grid-column:1/-1;justify-self:start}
+}
+@media(min-width:960px){
+.vw{margin:0 0 22px}
+#vCal{margin-top:0}
+.cday{min-height:108px;padding:7px}
+.ch{font-size:.76rem}
+}

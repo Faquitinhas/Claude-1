@@ -25,19 +25,23 @@
 <div class="seg" id="seg"></div>
 <p class="xst" id="xst"></p>
 <button class="nxt" id="nxt" hidden></button>
+<button class="nxt pln" id="pln" hidden></button>
 <label class="sw"><input type="checkbox" id="shs"> Mostrar series</label>
 </aside>
 <section class="content">
+<div class="vw" role="tablist" aria-label="Vista"><button role="tab" id="vbP" aria-selected="true">Películas</button><button role="tab" id="vbC" aria-selected="false">Calendario</button></div>
+<div id="vPelis">
 <div class="tabs" id="tabs" role="tablist"></div>
 <div id="xin"></div>
 <div class="flt" id="flt"><button data-f="all" aria-pressed="true">Todas</button><button data-f="pend" aria-pressed="false">Pendientes</button><button data-f="seen" aria-pressed="false">Vistas</button><input id="q" type="search" placeholder="Buscar en esta fase…" aria-label="Buscar" autocomplete="off"></div>
 <div class="grid" id="grid"></div>
 <div id="rmv"></div>
-<p class="hint">Toca una película para marcarla y la i para ver detalles.<button id="reset">Reiniciar</button></p>
+<p class="hint">Tocá una película para marcarla y la i para ver detalles o elegir qué día la ves.<button id="reset">Reiniciar</button></p>
 <p class="hint" id="st"></p>
 <details class="gd" id="gd"><summary>¿Cómo guardo mi progreso?</summary><div class="gdb">
-<p>Tus películas vistas, los puntajes que enviaste y tu favorita se guardan <b>solo en este navegador</b>. Si abrís la página en otro celular o computadora, o si borrás los datos del navegador, empezás de cero. Para pasar tu progreso a otro dispositivo:</p>
+<p>Tus películas vistas, los puntajes que enviaste, tu favorita y las fechas del calendario se guardan <b>solo en este navegador</b>. Si abrís la página en otro celular o computadora, o si borrás los datos del navegador, empezás de cero. Para pasar tu progreso a otro dispositivo:</p>
 <ol><li>Tocá <b>Copiar enlace de progreso</b> y mandátelo (WhatsApp, notas, mail).</li><li>Abrí ese enlace en el otro dispositivo y aceptá cargar el progreso.</li></ol>
+<p class="nt">El enlace lleva vistas, puntajes y favorita. Las fechas del calendario no viajan: quedan en el dispositivo donde las pusiste (o en Mi Agenda, si las mandaste).</p>
 <div class="ac"><button id="cpl">Copiar enlace de progreso</button></div>
 <p class="nt">Si el enlace no te sirve (por ejemplo, desde el ícono de la pantalla de inicio, que puede tener su propia memoria separada de Safari), usá el código: copialo y pegalo abajo en el otro lado. Podés pegarlo con texto alrededor, no hace falta recortarlo. Cambia cada vez que marcás algo o enviás un puntaje, así que copialo de nuevo si avanzaste.</p>
 <div class="code" id="cd"></div>
@@ -46,10 +50,33 @@
 <div class="key"><input id="cin" placeholder="Pegá tu código o enlace acá" autocomplete="off" autocapitalize="characters" spellcheck="false"><button id="cld">Cargar</button></div>
 <p class="nt" id="cmsg"></p>
 </div></details>
+</div>
+<div id="vCal" hidden aria-label="Calendario del maratón">
+<div class="calh"><button id="cp" aria-label="Mes anterior">‹</button><h2 id="cm"></h2><button id="chy" class="hoy">Hoy</button><button id="cn" aria-label="Mes siguiente">›</button></div>
+<div class="cal"><div class="dw"><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span></div><div class="cg" id="cg"></div></div>
+<div class="box" id="dayp"></div>
+<details class="box" id="autoBox"><summary>Armar el plan automático</summary>
+<p class="nt">Reparte las películas que todavía no tienen fecha, en orden de estreno, en los días que elijas. Los días que ya tienen algo programado se saltean. Las series se agregan a mano, tocando un día.</p>
+<div class="ap"><label>Empezás el<input type="date" id="apd"></label><label>Primera peli a las<input type="time" id="aT" value="21:00" step="300"></label><label>Pelis por día<select id="an"><option>1</option><option selected>2</option><option>3</option></select></label></div>
+<div class="lbl">Qué días</div>
+<div class="wds" id="aw"></div>
+<label class="chk"><input type="checkbox" id="askip" checked> Saltear las que ya viste</label>
+<label class="chk"><input type="checkbox" id="axm"> Incluir la saga X-Men al final</label>
+<p class="nt" id="amsg" role="status"></p>
+<div class="btns"><button class="btn pri" id="ago">Armar plan</button><button class="btn" id="aclr">Borrar todas las fechas</button></div>
+</details>
+<div class="box"><h4>Pasarlo a Mi Agenda</h4>
+<p class="nt" id="sn2"></p>
+<div class="btns"><a class="btn pri" id="sl" target="_blank" rel="noopener">Abrir en Mi Agenda</a><button class="btn" id="sc">Copiar código</button></div>
+<textarea id="scode" readonly hidden aria-label="Código para pegar en Mi Agenda"></textarea>
+<p class="nt">Cada título queda como evento con su hora en el tema “Maratón UCM”. Si cambiás fechas acá, mandalo de nuevo y la agenda se actualiza. Si la agenda no te muestra el aviso solo, tocá “Importar” arriba en la agenda y pegá el código.</p>
+</div>
+</div>
 </section>
 <div class="adm"><button id="ad0" aria-label="Administración">·</button><div id="adf" hidden></div></div>
 </main>
 <div class="ov" id="ov" hidden><div class="sheet" id="sh" role="dialog" aria-modal="true"><div id="sb"></div></div></div>
 <script src="app.js"></script>
+<script src="plan.js"></script>
 </body>
 </html>
