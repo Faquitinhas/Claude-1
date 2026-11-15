@@ -40,7 +40,7 @@ const newKey=n=>{if(!plan[n])return n;let i=2;while(plan[n+"#"+i])i++;return n+"
 const onDay=k=>pkeys().filter(n=>plan[n].d===k).sort((a,b)=>(plan[a].t||"99").localeCompare(plan[b].t||"99"));
 const relOn=k=>Object.keys(REL).filter(n=>REL[n]===k);
 const after=n=>Math.ceil((tm(plan[n].t)+dur(n)+15)/5)*5;
-const nextTime=k=>{const l=onDay(k).filter(n=>plan[n].t);return l.length?fm(after(l[l.length-1])):"21:00"};
+const nextTime=k=>{const l=onDay(k).filter(n=>plan[n].t);return l.length?fm(Math.min(after(l[l.length-1]),1435)):"21:00"}; // sin dar la vuelta a la medianoche
 const fdate=k=>{const d=fk(k);return `${DC[d.getDay()]} ${d.getDate()} ${MES[d.getMonth()].slice(0,3)}`};
 const rdate=k=>{const n=Math.round((fk(k)-fk(TODAY))/864e5);return n===0?"hoy":n===1?"mañana":fdate(k)};
 
@@ -68,7 +68,7 @@ if(e.target.id==="wd"){const d=e.target.value;setPlan(cur,d,d?((plan[cur]&&plan[
 if(e.target.id==="wt"&&plan[cur]){plan[cur].t=e.target.value;savePlan()}});
 $("sb").addEventListener("click",e=>{
 if(!cur)return;
-if(e.target.id==="wx")setPlan(cur,"");
+if(e.target.id==="wx"){for(const k of keysOf(cur))delete plan[k];savePlan()}
 if(e.target.id==="wc"&&plan[cur]){const k=plan[cur].d;closeSheet();goDay(k)}});
 
 // código para mandar el plan a Mi Agenda
@@ -193,7 +193,7 @@ ${w&&ser&&!tpNew&&w.d!==selDay?`<p class="tpw">Esta tanda estaba el ${fdate(w.d)
 ${ser?`<div class="eps" role="group" aria-label="Episodios">
 <div class="epg" aria-label="Llevás ${done} de ${tot} episodios programados"><div class="epb"><i style="width:${Math.min(100,done/tot*100)}%"></i><i class="nw" style="left:${Math.min(100,done/tot*100)}%;width:${Math.max(0,Math.min(100-done/tot*100,tpE/tot*100))}%"></i></div>
 <p class="ept">Llevás <b>${done} de ${tot}</b> episodios programados${done+tpE>tot?" · <span class=\"epo\">te pasás del total</span>":done+tpE===tot?" · con esta tanda completás la serie":""}</p></div>
-${others.length?`<ul class="tds">${others.map(x=>`<li><button type="button" data-sk="${h2(x)}"><span>${fdate(plan[x].d)}${plan[x].t?" · "+plan[x].t:""}</span><b>${epRT(x)}</b></button></li>`).join("")}</ul>`:""}
+${others.length?`<p class="tdl">Tus tandas de ${h2(n)}</p><ul class="tds">${others.map(x=>`<li class="${plan[x].d===selDay?"hoy":""}"><button type="button" class="tde" data-sk="${h2(x)}" aria-label="Editar la tanda del ${fdate(plan[x].d)}"><span>${plan[x].d===selDay?"Este día":fdate(plan[x].d)}${plan[x].t?" · "+plan[x].t:""}</span><b>${epRT(x)}</b></button><button type="button" class="tdx" data-rk="${h2(x)}" aria-label="Quitar la tanda ${epRT(x)} del ${fdate(plan[x].d)}">Quitar</button></li>`).join("")}</ul>`:""}
 <p class="epl">¿Cuántos episodios ves ${tpNew&&others.length?"en esta tanda":"esta vez"}?</p>
 <div class="epr"><button type="button" data-ep="-1" aria-label="Un episodio menos" ${tpE<=1?"disabled":""}>−</button><output id="tpEp"><b>${tpE}</b><small>${ra===rb?"episodio "+ra:"episodios "+ra+" a "+rb}</small></output><button type="button" data-ep="1" aria-label="Un episodio más" ${tpE>=tot?"disabled":""}>+</button></div>
 <div class="qk epq">${[...new Set([1,2,3,Math.max(1,tot-done)])].filter(x=>x<=tot).sort((a,b)=>a-b).map(x=>`<button type="button" data-es="${x}" aria-pressed="${x===tpE}">${x===tot-done&&x>3?"Los que faltan ("+x+")":epTxt(x)}</button>`).join("")}</div>
@@ -246,6 +246,9 @@ if(b.dataset.ep||b.dataset.es){const mx=EP[bn(tpN)][0];tpE=Math.min(mx,Math.max(
 const o=$("tpEp");if(o)o.animate([{transform:"scale(1.2)"},{transform:"none"}],{duration:220,easing:"ease-out"});const f=$("tpi").querySelector(b.dataset.ep?`[data-ep="${b.dataset.ep}"]`:`[data-es="${b.dataset.es}"]`);if(f&&!f.disabled)f.focus();return}
 if(b.dataset.sk){const k=b.dataset.sk,d=plan[k].d;if(d!==selDay){selDay=d;dvDraw()}tpN=k;tpNew=false;tpT=plan[k].t||nextTime(d);tpE=epOf(k);tpDraw();
 $("tpb").animate([{opacity:.4,transform:"scale(.98)"},{opacity:1,transform:"none"}],{duration:220,easing:"ease-out"});return}
+if(b.dataset.rk){const k=b.dataset.rk,n=bn(k),r=epRT(k),d=plan[k].d;
+const li=b.closest("li");const go=()=>{setPlan(k,"");dvDraw();tpDraw();toast(`Quitaste ${n} (${r}) del ${fdate(d)}`)};
+if(li&&!matchMedia("(prefers-reduced-motion: reduce)").matches)li.animate([{opacity:1,transform:"none"},{opacity:0,transform:"translateX(40px)"}],{duration:220,easing:"ease-in"}).onfinish=go;else go();return}
 if(b.id==="tpX")return tpClose(false);
 if(b.id==="tpOk"){const k=tpN,n=bn(k),t=tpT,ser=isS(n);setPlan(k,selDay,t,EP[n]?tpE:0);
 tpAfterSave(k,`Listo: ${n}${ser?" ("+epRT(k)+")":""} · ${rdate(selDay)} a las ${t}`,true);return}

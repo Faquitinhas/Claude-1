@@ -447,3 +447,9 @@ h1{font-size:3.1rem}
 .tds button{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;padding:8px 12px;border-radius:11px;border:1px solid var(--line);background:var(--card);color:var(--fg);font:500 .85rem "DM Sans",system-ui,sans-serif;cursor:pointer;text-align:left}
 .tds button:hover{border-color:#8b6bff}
 .tds b{color:#c4b3ff;font-weight:700;white-space:nowrap}
+.tdl{margin:0 0 6px;font-size:.8rem;color:var(--mut);text-align:left}
+.tds li{display:flex;gap:6px}
+.tds .tde{flex:1}
+.tds li.hoy .tde{border-color:#8b6bff88;background:#8b6bff1a}
+.tdx{flex:none;padding:0 12px;border-radius:11px;border:1px solid #ff5c8566;background:#ff5c8514;color:#ff9db3;font:600 .82rem "DM Sans",system-ui,sans-serif;cursor:pointer}
+.tdx:hover{background:#ff5c8526}
