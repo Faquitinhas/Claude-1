@@ -238,9 +238,7 @@ document.querySelectorAll(".tab").forEach(x=>x.setAttribute("aria-selected",+x.d
 $("tabs").addEventListener("click",e=>{const b=e.target.closest(".tab");if(!b)return;goTab(+b.dataset.i);b.scrollIntoView({block:"nearest",inline:"nearest"})});
 $("flt").addEventListener("click",e=>{const b=e.target.closest("button[data-f]");if(!b)return;flt=b.dataset.f;
 $("flt").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));grid()});
-$("q").addEventListener("input",e=>{qq=e.target.value.trim();grid()});
 $("nxt").onclick=()=>{const b=$("nxt"),n=b.dataset.n;
-if(flt==="seen"||qq){flt="all";qq="";$("q").value="";$("flt").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x.dataset.f==="all"))}
 goTab(+b.dataset.i);const c=cardOf(n);if(!c)return;const cell=c.parentNode;
 cell.scrollIntoView({behavior:"smooth",block:"center"});cell.classList.remove("hl");void cell.offsetWidth;cell.classList.add("hl")};
 $("reset").onclick=()=>{if(confirm("¿Borrar tu progreso? Los pósters y las fechas del calendario se quedan.")){seen={};sv("ucm-vistas",seen);grid();stats()}};
