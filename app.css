@@ -522,3 +522,6 @@ html,body,*{scrollbar-width:none;-ms-overflow-style:none}
 .pgr button:hover:not(:disabled){background:#ffffff2a}
 .pgr button:disabled{opacity:.3;cursor:default}
 .pgr span{min-width:54px;text-align:center;font:600 .78rem "DM Sans",system-ui,sans-serif;color:var(--mut);font-variant-numeric:tabular-nums}
+/* sin rebote ni arrastre hacia abajo al llegar a los bordes */
+html,body{overscroll-behavior:none}
+.sheet{overscroll-behavior:contain}
