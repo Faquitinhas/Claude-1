@@ -14,14 +14,20 @@ const fm=m=>{m=((m%1440)+1440)%1440;return pad(Math.floor(m/60))+":"+pad(m%60)};
 const hm=x=>`${Math.floor(x/60)} h ${pad(x%60)} min`;
 const ALL=D.flatMap(p=>p[1].map(m=>m[0]));
 const ph=n=>D.findIndex(p=>p[1].some(m=>m[0]===n));
-const dur=n=>R[n]||120; // series y títulos sin duración conocida: bloque de 2 h
-const durT=n=>R[n]?hm(R[n]):isSer(n)?"bloque de 2 h (serie)":"unas 2 h";
+// series: [episodios disponibles, minutos aproximados por episodio]
+const EP={"WandaVision":[9,35],"The Falcon and the Winter Soldier":[6,50],"Loki":[12,50],"What If...?":[26,32],"Hawkeye":[6,50],"Moon Knight":[6,47],"Ms. Marvel":[6,45],"She-Hulk: Attorney at Law":[9,33],"I Am Groot":[10,4],"Daredevil":[39,55],"Secret Invasion":[6,50],"Echo":[5,45],"Agatha All Along":[9,40],"Daredevil: Born Again":[17,50],"Ironheart":[6,45],"Eyes of Wakanda":[4,30],"Marvel Zombies":[4,35],"VisionQuest":[8,45],"The Punisher: One Last Kill":[1,50]};
+const defEp=n=>EP[n]?Math.min(EP[n][0],Math.max(1,Math.round(120/EP[n][1]))):1;
+const epOf=n=>plan[n]&&plan[n].e||defEp(n);
+const epTxt=e=>e+(e===1?" episodio":" episodios");
+// duración en minutos; en las series depende de cuántos episodios ves ese día
+const dur=(n,e)=>EP[n]?(e||epOf(n))*EP[n][1]:R[n]||120;
+const durT=(n,e)=>EP[n]?`${epTxt(e||epOf(n))} · ${hm(dur(n,e))}`:R[n]?hm(R[n]):"unas 2 h";
 const h2=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
 let plan=ld("ucm-plan"),view="pelis",selDay=TODAY,calM=new Date();
 calM=new Date(calM.getFullYear(),calM.getMonth(),1);
 for(const n of Object.keys(plan)){const p=plan[n];
 if(!ALL.includes(n)||!p||!/^\d{4}-\d\d-\d\d$/.test(p.d||""))delete plan[n];
-else if(!/^\d\d:\d\d$/.test(p.t||""))p.t=""}
+else{if(!/^\d\d:\d\d$/.test(p.t||""))p.t="";if(p.e!==undefined&&!(EP[n]&&Number.isInteger(p.e)&&p.e>=1&&p.e<=EP[n][0]))delete p.e}}
 const endT=n=>plan[n]&&plan[n].t?fm(tm(plan[n].t)+dur(n)):"";
 const onDay=k=>ALL.filter(n=>plan[n]&&plan[n].d===k).sort((a,b)=>(plan[a].t||"99").localeCompare(plan[b].t||"99"));
 const relOn=k=>Object.keys(REL).filter(n=>REL[n]===k);
@@ -31,12 +37,13 @@ const fdate=k=>{const d=fk(k);return `${DC[d.getDay()]} ${d.getDate()} ${MES[d.g
 const rdate=k=>{const n=Math.round((fk(k)-fk(TODAY))/864e5);return n===0?"hoy":n===1?"mañana":fdate(k)};
 
 // usados desde app.js (tarjetas y hoja de detalles)
-const whenBadge=n=>{const w=plan[n];return w?`<span class="when">${fdate(w.d)}${w.t?" · "+w.t:""}</span>`:""};
+const epS=n=>EP[n]&&plan[n]?` · ${epOf(n)} ep`:"";
+const whenBadge=n=>{const w=plan[n];return w?`<span class="when">${fdate(w.d)}${w.t?" · "+w.t:""}${epS(n)}</span>`:""};
 function whenBox(n){const pl=plan[n]||{};
 return `<h4>Cuándo la ves</h4><div class="when-ed"><label>Día<input type="date" id="wd" value="${pl.d||""}"></label><label>Arranca a las<input type="time" id="wt" step="300" value="${pl.t||""}"${pl.d?"":" disabled"}></label>${pl.d?`<button class="btn" id="wx">Quitar fecha</button><button class="btn" id="wc">Ver en el calendario</button>`:""}</div><p class="nt">Dura ${durT(n)}${pl.t?` · terminás tipo ${endT(n)}`:pl.d?"":" · elegí un día para ponerle hora"}.</p>`}
 
 function savePlan(){sv("ucm-plan",plan);grid();planUpd();if(cur&&vt==="info")draw()}
-function setPlan(n,d,t){if(!d)delete plan[n];else plan[n]={d,t:t||""};savePlan()}
+function setPlan(n,d,t,e){if(!d)delete plan[n];else{const o={d,t:t||""},pe=e||(plan[n]&&plan[n].e);if(EP[n]&&pe)o.e=pe;plan[n]=o}savePlan()}
 function planUpd(){if(view==="cal")cal();nextPlan();const v=document.getElementById("dv");if(v&&!v.hidden)dvDraw()}
 // Lo próximo que tenés agendado y todavía no viste
 function nextPlan(){const b=$("pln");
@@ -75,10 +82,10 @@ $("cm").textContent=MES[calM.getMonth()]+" "+calM.getFullYear();
 const off=(calM.getDay()+6)%7,dim=new Date(calM.getFullYear(),calM.getMonth()+1,0).getDate();
 let h="";for(let i=0;i<off;i++)h+=`<div class="cday blank" aria-hidden="true"></div>`;
 for(let d=1;d<=dim;d++){const k=dk(new Date(calM.getFullYear(),calM.getMonth(),d)),l=onDay(k),rl=relOn(k);
-h+=`<button class="cday${k===TODAY?" today":""}${k===selDay?" sel":""}${k<TODAY?" past":""}" data-k="${k}" aria-pressed="${k===selDay}" aria-label="${d} de ${MES[calM.getMonth()]}${l.length?`, ${l.length} ${l.length>1?"títulos":"título"}`:""}${rl.length?", estreno de "+h2(rl.join(" y ")):""}"><span class="dn">${d}</span>${l.length||rl.length?`<span class="chs">${rl.map(n=>`<span class="ch rel"><span>★ ${h2(n)}</span></span>`).join("")}${l.map(n=>`<span class="ch${seen[n]?" ok":""}" style="--h:${HUES[ph(n)]}">${plan[n].t?`<time>${plan[n].t}</time>`:""}<span>${h2(n)}</span></span>`).join("")}</span>`:""}</button>`}
+h+=`<button class="cday${k===TODAY?" today":""}${k===selDay?" sel":""}${k<TODAY?" past":""}" data-k="${k}" aria-pressed="${k===selDay}" aria-label="${d} de ${MES[calM.getMonth()]}${l.length?`, ${l.length} ${l.length>1?"títulos":"título"}`:""}${rl.length?", estreno de "+h2(rl.join(" y ")):""}"><span class="dn">${d}</span>${l.length||rl.length?`<span class="chs">${rl.map(n=>`<span class="ch rel"><span>★ ${h2(n)}</span></span>`).join("")}${l.map(n=>`<span class="ch${seen[n]?" ok":""}" style="--h:${HUES[ph(n)]}">${plan[n].t?`<time>${plan[n].t}</time>`:""}<span>${h2(n)}${epS(n)}</span></span>`).join("")}</span>`:""}</button>`}
 const tail=(7-(off+dim)%7)%7;for(let i=0;i<tail;i++)h+=`<div class="cday blank" aria-hidden="true"></div>`;
 $("cg").innerHTML=h;day();syncBox()}
-function day(){
+function day(){if(!$("dayp"))return;
 const d=fk(selDay),l=onDay(selDay),rl=relOn(selDay);
 const tot=l.reduce((a,n)=>a+dur(n),0),last=l.length?l[l.length-1]:null,le=last?endT(last):"";
 const opts=D.map(p=>{const o=p[1].filter(m=>vis(m)&&!plan[m[0]]).sort((a,b)=>!!seen[a[0]]-!!seen[b[0]]);
@@ -91,8 +98,8 @@ $("cg").addEventListener("click",e=>{const b=e.target.closest(".cday[data-k]");i
 $("cp").onclick=()=>{calM=new Date(calM.getFullYear(),calM.getMonth()-1,1);cal()};
 $("cn").onclick=()=>{calM=new Date(calM.getFullYear(),calM.getMonth()+1,1);cal()};
 $("chy").onclick=()=>goDay(TODAY);
-$("dayp").addEventListener("change",e=>{const n=e.target.dataset.tn;if(n&&plan[n]){plan[n].t=e.target.value;savePlan()}});
-$("dayp").addEventListener("click",e=>{
+if($("dayp"))$("dayp").addEventListener("change",e=>{const n=e.target.dataset.tn;if(n&&plan[n]){plan[n].t=e.target.value;savePlan()}});
+if($("dayp"))$("dayp").addEventListener("click",e=>{
 const r=e.target.dataset.rm;if(r){setPlan(r,"");return}
 if(e.target.id==="ab"){const n=$("as").value;if(n)setPlan(n,selDay,$("at").value)}});
 
@@ -124,7 +131,7 @@ if(v==="cal")cal()}
 $("vbP").onclick=()=>setView("pelis");$("vbC").onclick=()=>setView("cal");
 
 // ---------- Vista del día: todos los pósters para elegir qué ver ese día y a qué hora ----------
-let dvTab=-1,tpN=null,tpT="21:00",tpFrom=null;
+let dvTab=-1,tpN=null,tpT="21:00",tpE=1,tpFrom=null;
 const tpDur=n=>dur(n);
 function dvOpen(k){selDay=k;if(view==="cal")cal();
 if(dvTab<0){dvTab=0;for(let i=0;i<D.length;i++)if(D[i][1].some(m=>vis(m)&&!seen[m[0]]&&!isSoon(m[0]))){dvTab=i;break}}
@@ -136,9 +143,9 @@ const c=document.querySelector(`.cday[data-k="${selDay}"]`);if(c)c.focus()}
 function dvHead(){const d=fk(selDay),l=onDay(selDay),tot=l.reduce((a,n)=>a+dur(n),0),last=l.length?l[l.length-1]:null,le=last?endT(last):"";
 $("dvt").textContent=`${DS[d.getDay()]} ${d.getDate()} de ${MES[d.getMonth()]}`;
 $("dvs").innerHTML=l.length?`<b>${l.length}</b> ${l.length>1?"títulos":"título"} · ${hm(tot)} de pantalla${le?` · terminás tipo <b>${le}</b>`:""}`:"Tocá un póster para elegir a qué hora lo ves.";
-$("dvl").innerHTML=l.map(n=>`<button type="button" class="dvc" data-n="${h2(n)}" style="--h:${HUES[ph(n)]}"><time>${plan[n].t||"--:--"}</time>${h2(n)}</button>`).join("")}
+$("dvl").innerHTML=l.map(n=>`<button type="button" class="dvc" data-n="${h2(n)}" style="--h:${HUES[ph(n)]}"><time>${plan[n].t||"--:--"}</time>${h2(n)}${epS(n)}</button>`).join("")}
 function dvCard(m){const n=m[0],q=pos[n]||wk[n],p=q&&OK[q]?q:"",w=plan[n],here=w&&w.d===selDay;
-const badge=here?`<span class="dvt">${w.t?"⏰ "+w.t:"Sin hora"}</span>`:w?`<span class="when">${fdate(w.d)}${w.t?" · "+w.t:""}</span>`:"";
+const badge=here?`<span class="dvt">${w.t?"⏰ "+w.t:"Sin hora"}${epS(n)}</span>`:w?whenBadge(n):"";
 return `<div class="cell"><div class="card ${seen[n]?"done":""} ${p?"img":""} ${here?"pk":""}" role="button" tabindex="0" aria-label="${h2(n)}${here?", programada "+(w.t?"a las "+w.t:"este día"):""}${seen[n]?", vista":""}" data-n="${h2(n)}"${p?` style="background-image:${h2(cu(p))}"`:""}><span class="yr">${m[1]}${m[2]?" · Serie":""}</span><span class="nm">${h2(n)}</span><span class="stamp">vista</span><span class="tags">${badge}${isSoon(n)?'<span class="soon">Próximamente</span>':""}</span></div></div>`}
 function dvDraw(){dvHead();
 $("dvtabs").innerHTML=D.map((p,i)=>{const c=p[1].filter(m=>vis(m)&&plan[m[0]]&&plan[m[0]].d===selDay).length;
@@ -155,25 +162,30 @@ if(i!==dvTab){dvTab=i;dvDraw()}const c=$("dvg").querySelector(`.card[data-n="${C
 
 // ----- elegir la hora -----
 const QUICK=["18:00","19:00","20:00","21:00","22:00","23:00"];
-function tpClash(n,t){const a=tm(t),b=a+dur(n);return onDay(selDay).filter(x=>x!==n&&plan[x].t).find(x=>{const s=tm(plan[x].t),e=s+dur(x);return a<e&&s<b})}
-function tpDraw(){const n=tpN,w=plan[n],here=w&&w.d===selDay,end=fm(tm(tpT)+dur(n)),cl=tpClash(n,tpT),[hh,mm]=tpT.split(":");
+function tpClash(n,t){const a=tm(t),b=a+dur(n,tpE);return onDay(selDay).filter(x=>x!==n&&plan[x].t).find(x=>{const s=tm(plan[x].t),e=s+dur(x);return a<e&&s<b})}
+function tpDraw(){const n=tpN,w=plan[n],here=w&&w.d===selDay,ser=!!EP[n],end=fm(tm(tpT)+dur(n,tpE)),cl=tpClash(n,tpT),[hh,mm]=tpT.split(":");
 const nx=nextTime(selDay);
-$("tpi").innerHTML=`<p class="tpk">${h2(D[ph(n)][0])} · ${durT(n)}</p><h3 id="tpH">${h2(n)}</h3>
+$("tpi").innerHTML=`<p class="tpk">${h2(D[ph(n)][0])} · ${durT(n,tpE)}</p><h3 id="tpH">${h2(n)}</h3>
 <p class="tpd">${DS[fk(selDay).getDay()]} ${fk(selDay).getDate()} de ${MES[fk(selDay).getMonth()]}</p>
 ${w&&!here?`<p class="tpw">Ahora está el ${fdate(w.d)}${w.t?" a las "+w.t:""}. Si guardás, pasa a este día.</p>`:""}
+${ser&&EP[n][0]>1?`<div class="eps" role="group" aria-label="Episodios">
+<p class="epl">¿Cuántos episodios ves?</p>
+<div class="epr"><button type="button" data-ep="-1" aria-label="Un episodio menos" ${tpE<=1?"disabled":""}>−</button><output id="tpEp"><b>${tpE}</b><small>de ${EP[n][0]}</small></output><button type="button" data-ep="1" aria-label="Un episodio más" ${tpE>=EP[n][0]?"disabled":""}>+</button></div>
+<div class="qk epq">${[...new Set([1,2,3,EP[n][0]])].filter(x=>x<=EP[n][0]).map(x=>`<button type="button" data-es="${x}" aria-pressed="${x===tpE}">${x===EP[n][0]&&x>3?"Todos ("+x+")":epTxt(x)}</button>`).join("")}</div>
+<p class="epm">Cada episodio dura unos ${EP[n][1]} min · en total ${hm(dur(n,tpE))}</p></div>`:""}
 <div class="clk" role="group" aria-label="Hora de inicio">
 <div class="cu"><button type="button" data-st="60" aria-label="Una hora más">▲</button><output id="tpHh">${hh}</output><button type="button" data-st="-60" aria-label="Una hora menos">▼</button></div>
 <span class="cc">:</span>
 <div class="cu"><button type="button" data-st="5" aria-label="Cinco minutos más">▲</button><output id="tpMm">${mm}</output><button type="button" data-st="-5" aria-label="Cinco minutos menos">▼</button></div>
 </div>
-<p class="tpe">Termina tipo <b>${end}</b>${tm(tpT)+dur(n)>=1440?" (pasada la medianoche)":""}</p>
+<p class="tpe">Termina tipo <b>${end}</b>${tm(tpT)+dur(n,tpE)>=1440?" (pasada la medianoche)":""}</p>
 ${cl?`<p class="tpx">Se superpone con <b>${h2(cl)}</b> (${plan[cl].t} a ${endT(cl)}).</p>`:""}
 <div class="qk">${[...new Set([nx,...QUICK])].map(t=>`<button type="button" data-q="${t}" aria-pressed="${t===tpT}">${t===nx&&onDay(selDay).some(x=>x!==n&&plan[x].t)?"Después de la anterior · ":""}${t}</button>`).join("")}</div>
 <label class="tpm">Otra hora exacta <input type="time" id="tpIn" step="300" value="${tpT}"></label>
-<button type="button" class="mbtn" id="tpOk">${here?"Guardar cambio":"Guardar"} · ${tpT}</button>
+<button type="button" class="mbtn" id="tpOk">${here?"Guardar cambio":"Guardar"} · ${tpT}${ser&&EP[n][0]>1?" · "+tpE+" ep":""}</button>
 ${here?`<button type="button" class="tprm" id="tpRm">Quitar de este día</button>`:""}`}
 function tpOpen(n,card){tpN=n;tpFrom=card||null;const w=plan[n];
-tpT=w&&w.d===selDay&&w.t?w.t:nextTime(selDay);
+tpT=w&&w.d===selDay&&w.t?w.t:nextTime(selDay);tpE=epOf(n);
 const o=$("tp"),b=$("tpb"),ph_=$("tpp"),q=pos[n]||wk[n];
 ph_.style.backgroundImage=q&&OK[q]?cu(q):"";ph_.classList.toggle("np",!(q&&OK[q]));ph_.style.setProperty("--h",HUES[ph(n)]);ph_.dataset.t=n;
 tpDraw();o.hidden=false;
@@ -201,9 +213,11 @@ const b=e.target.closest("button");if(!b)return;
 if(b.dataset.st){tpSet(fm(Math.round((tm(tpT)+ +b.dataset.st)/5)*5));const k=b.dataset.st;const nb=$("tpi").querySelector(`[data-st="${k}"]`);if(nb)nb.focus();
 const o=Math.abs(k)===60?$("tpHh"):$("tpMm");o.animate([{transform:`translateY(${k>0?8:-8}px)`,opacity:.3},{transform:"none",opacity:1}],{duration:200,easing:"ease-out"});return}
 if(b.dataset.q){tpSet(b.dataset.q);return}
+if(b.dataset.ep||b.dataset.es){const mx=EP[tpN][0];tpE=Math.min(mx,Math.max(1,b.dataset.es?+b.dataset.es:tpE+ +b.dataset.ep));tpDraw();
+const o=$("tpEp");if(o)o.animate([{transform:"scale(1.25)"},{transform:"none"}],{duration:220,easing:"ease-out"});const f=$("tpi").querySelector(b.dataset.ep?`[data-ep="${b.dataset.ep}"]`:`[data-es="${b.dataset.es}"]`);if(f&&!f.disabled)f.focus();return}
 if(b.id==="tpX")return tpClose(false);
-if(b.id==="tpOk"){const n=tpN,t=tpT;setPlan(n,selDay,t);dvDraw();tpFrom=$("dvg").querySelector(`.card[data-n="${CSS.escape(n)}"]`)||tpFrom;if(tpFrom)tpFrom.style.visibility="hidden";
-tpClose(true);toast(`Listo: ${n} · ${rdate(selDay)} a las ${t}`);return}
+if(b.id==="tpOk"){const n=tpN,t=tpT;setPlan(n,selDay,t,EP[n]?tpE:0);dvDraw();tpFrom=$("dvg").querySelector(`.card[data-n="${CSS.escape(n)}"]`)||tpFrom;if(tpFrom)tpFrom.style.visibility="hidden";
+tpClose(true);toast(`Listo: ${n}${EP[n]?" ("+epTxt(tpE)+")":""} · ${rdate(selDay)} a las ${t}`);return}
 if(b.id==="tpRm"){const n=tpN;setPlan(n,"");dvDraw();tpFrom=$("dvg").querySelector(`.card[data-n="${CSS.escape(n)}"]`)||tpFrom;if(tpFrom)tpFrom.style.visibility="hidden";tpClose(false);toast(`Quitaste ${n} de este día`)}});
 $("tp").addEventListener("change",e=>{if(e.target.id==="tpIn"&&/^\d\d:\d\d$/.test(e.target.value))tpSet(e.target.value)});
 document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;

@@ -418,3 +418,18 @@ h1{font-size:3.1rem}
 .tpm{display:flex;justify-content:center;align-items:center;gap:10px;margin:0 0 14px;color:var(--mut);font-size:.85rem}
 .tprm{margin-top:10px;border:0;background:none;color:#ff9db3;font:600 .9rem "DM Sans",system-ui,sans-serif;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
 @media (prefers-reduced-motion:reduce){.dv.in,.dv.out,.cc{animation:none}}
+
+/* ====== Episodios de una serie ====== */
+.eps{margin:16px 0 4px;padding:14px;border-radius:16px;background:#0b0a22;border:1px solid var(--line)}
+.epl{margin:0 0 8px;font:700 .95rem "Bricolage Grotesque",system-ui,sans-serif}
+.epr{display:flex;justify-content:center;align-items:center;gap:14px}
+.epr button{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--fg);font-size:1.4rem;line-height:1;cursor:pointer;transition:background .15s,transform .1s}
+.epr button:hover:not(:disabled){background:#8b6bff26}
+.epr button:active:not(:disabled){transform:scale(.92)}
+.epr button:disabled{opacity:.35;cursor:default}
+.epr output{display:flex;flex-direction:column;align-items:center;min-width:70px}
+.epr output b{font:800 2.4rem/1 "Bricolage Grotesque",system-ui,sans-serif;font-variant-numeric:tabular-nums;background:linear-gradient(180deg,#fff,#c9bfff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.epr output small{color:var(--mut);font-size:.78rem;margin-top:2px}
+.epq{margin:12px 0 6px}
+.epm{margin:0;color:var(--mut);font-size:.82rem}
+@media (max-height:900px){.tpp{width:92px;margin-bottom:8px}.clk{margin-top:10px}.cu output{font-size:2.9rem}}

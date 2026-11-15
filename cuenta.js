@@ -20,7 +20,7 @@ return j}
 // Reemplaza el progreso de este dispositivo por el que viene de la cuenta
 function applyData(d){d=JSON.parse(JSON.stringify(obj(d)));applying=true;
 try{seen=obj(d.seen);sent=obj(d.sent);QT=obj(d.qt);fav=typeof d.fav==="string"&&d.fav?d.fav:null;
-const p=obj(d.plan);plan={};for(const n of Object.keys(p)){const w=p[n];if(ALL.includes(n)&&w&&/^\d{4}-\d\d-\d\d$/.test(w.d||""))plan[n]={d:w.d,t:/^\d\d:\d\d$/.test(w.t||"")?w.t:""}}
+const p=obj(d.plan);plan={};for(const n of Object.keys(p)){const w=p[n];if(ALL.includes(n)&&w&&/^\d{4}-\d\d-\d\d$/.test(w.d||""))plan[n]={d:w.d,t:/^\d\d:\d\d$/.test(w.t||"")?w.t:""};if(EP[n]&&Number.isInteger(w.e)&&w.e>=1&&w.e<=EP[n][0])plan[n].e=w.e}
 sv("ucm-vistas",seen);sv("ucm-enviados-v2",sent);sv("ucm-quitadas",QT);sv("ucm-fav-v2",{n:fav});sv("ucm-plan",plan)}
 finally{applying=false}
 grid();stats();rmDraw();if(typeof planUpd==="function")planUpd();if(cur)draw()}
