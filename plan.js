@@ -37,7 +37,7 @@ return `<h4>Cuándo la ves</h4><div class="when-ed"><label>Día<input type="date
 
 function savePlan(){sv("ucm-plan",plan);grid();planUpd();if(cur&&vt==="info")draw()}
 function setPlan(n,d,t){if(!d)delete plan[n];else plan[n]={d,t:t||""};savePlan()}
-function planUpd(){if(view==="cal")cal();nextPlan()}
+function planUpd(){if(view==="cal")cal();nextPlan();const v=document.getElementById("dv");if(v&&!v.hidden)dvDraw()}
 // Lo próximo que tenés agendado y todavía no viste
 function nextPlan(){const b=$("pln");
 const l=ALL.filter(n=>plan[n]&&!seen[n]&&plan[n].d>=TODAY).sort((a,c)=>(plan[a].d+(plan[a].t||"99")).localeCompare(plan[c].d+(plan[c].t||"99")));
@@ -87,7 +87,7 @@ $("dayp").innerHTML=`<div class="dph"><h3>${DS[d.getDay()]} ${d.getDate()} de ${
 ${rl.map(n=>`<p class="cd">🗓 Estreno en cines: ${h2(n)}</p>`).join("")}
 ${l.length?`<ul class="fl">${l.map(n=>`<li style="--h:${HUES[ph(n)]}"><input type="time" step="300" value="${plan[n].t||""}" data-tn="${h2(n)}" aria-label="Hora de inicio de ${h2(n)}"><div><b>${h2(n)}</b><small>${h2(D[ph(n)][0])} · ${durT(n)}${plan[n].t?` · hasta las ${endT(n)}`:""}${seen[n]?" · ya la viste":""}</small></div><button class="rm" data-rm="${h2(n)}" aria-label="Quitar ${h2(n)} de este día">×</button></li>`).join("")}</ul>`:`<p class="nt">Nada programado este día.</p>`}
 ${opts?`<div class="add"><select id="as" aria-label="Título para agregar">${opts}</select><input type="time" id="at" step="300" value="${nextTime(selDay)}" aria-label="Hora de inicio"><button class="btn pri" id="ab">Agregar a este día</button></div>`:`<p class="nt">Ya tenés todo con fecha.</p>`}`}
-$("cg").addEventListener("click",e=>{const b=e.target.closest(".cday[data-k]");if(!b)return;selDay=b.dataset.k;cal();$("dayp").scrollIntoView({behavior:"smooth",block:"nearest"})});
+$("cg").addEventListener("click",e=>{const b=e.target.closest(".cday[data-k]");if(!b)return;dvOpen(b.dataset.k)});
 $("cp").onclick=()=>{calM=new Date(calM.getFullYear(),calM.getMonth()-1,1);cal()};
 $("cn").onclick=()=>{calM=new Date(calM.getFullYear(),calM.getMonth()+1,1);cal()};
 $("chy").onclick=()=>goDay(TODAY);
@@ -122,6 +122,92 @@ $("vbP").setAttribute("aria-selected",v==="pelis");$("vbC").setAttribute("aria-s
 try{localStorage.setItem("ucm-vista",v)}catch(e){}
 if(v==="cal")cal()}
 $("vbP").onclick=()=>setView("pelis");$("vbC").onclick=()=>setView("cal");
+
+// ---------- Vista del día: todos los pósters para elegir qué ver ese día y a qué hora ----------
+let dvTab=-1,tpN=null,tpT="21:00",tpFrom=null;
+const tpDur=n=>dur(n);
+function dvOpen(k){selDay=k;if(view==="cal")cal();
+if(dvTab<0){dvTab=0;for(let i=0;i<D.length;i++)if(D[i][1].some(m=>vis(m)&&!seen[m[0]]&&!isSoon(m[0]))){dvTab=i;break}}
+const v=$("dv");v.hidden=false;document.body.style.overflow="hidden";v.scrollTop=0;
+v.classList.remove("in");void v.offsetWidth;v.classList.add("in");dvDraw();setTimeout(()=>$("dvb").focus(),50)}
+function dvClose(){const v=$("dv");v.classList.remove("in");v.classList.add("out");
+setTimeout(()=>{v.hidden=true;v.classList.remove("out");if($("ov").hidden&&$("mo").hidden)document.body.style.overflow=""},220);
+const c=document.querySelector(`.cday[data-k="${selDay}"]`);if(c)c.focus()}
+function dvHead(){const d=fk(selDay),l=onDay(selDay),tot=l.reduce((a,n)=>a+dur(n),0),last=l.length?l[l.length-1]:null,le=last?endT(last):"";
+$("dvt").textContent=`${DS[d.getDay()]} ${d.getDate()} de ${MES[d.getMonth()]}`;
+$("dvs").innerHTML=l.length?`<b>${l.length}</b> ${l.length>1?"títulos":"título"} · ${hm(tot)} de pantalla${le?` · terminás tipo <b>${le}</b>`:""}`:"Tocá un póster para elegir a qué hora lo ves.";
+$("dvl").innerHTML=l.map(n=>`<button type="button" class="dvc" data-n="${h2(n)}" style="--h:${HUES[ph(n)]}"><time>${plan[n].t||"--:--"}</time>${h2(n)}</button>`).join("")}
+function dvCard(m){const n=m[0],q=pos[n]||wk[n],p=q&&OK[q]?q:"",w=plan[n],here=w&&w.d===selDay;
+const badge=here?`<span class="dvt">${w.t?"⏰ "+w.t:"Sin hora"}</span>`:w?`<span class="when">${fdate(w.d)}${w.t?" · "+w.t:""}</span>`:"";
+return `<div class="cell"><div class="card ${seen[n]?"done":""} ${p?"img":""} ${here?"pk":""}" role="button" tabindex="0" aria-label="${h2(n)}${here?", programada "+(w.t?"a las "+w.t:"este día"):""}${seen[n]?", vista":""}" data-n="${h2(n)}"${p?` style="background-image:${h2(cu(p))}"`:""}><span class="yr">${m[1]}${m[2]?" · Serie":""}</span><span class="nm">${h2(n)}</span><span class="stamp">vista</span><span class="tags">${badge}${isSoon(n)?'<span class="soon">Próximamente</span>':""}</span></div></div>`}
+function dvDraw(){dvHead();
+$("dvtabs").innerHTML=D.map((p,i)=>{const c=p[1].filter(m=>vis(m)&&plan[m[0]]&&plan[m[0]].d===selDay).length;
+return `<button class="tab${p[2]?" xm":""}" role="tab" data-i="${i}" aria-selected="${i===dvTab}" style="--h:${HUES[i]}">${p[2]?"★ ":""}${p[0]}${c?`<small class="dvn">${c}</small>`:""}</button>`}).join("");
+const g=$("dvg"),l=D[dvTab][1].filter(vis);g.style.setProperty("--h",HUES[dvTab]);
+g.innerHTML=l.map(dvCard).join("")||`<p class="empty">No hay nada para mostrar en esta fase.</p>`;
+fitAll();l.forEach(m=>{const n=m[0],q=pos[n]||wk[n];if(q&&!OK[q])want(n,q)})}
+$("dvb").onclick=dvClose;
+$("dvtabs").addEventListener("click",e=>{const b=e.target.closest(".tab");if(!b)return;dvTab=+b.dataset.i;dvDraw();b.scrollIntoView({block:"nearest",inline:"nearest"})});
+$("dvg").addEventListener("click",e=>{const c=e.target.closest(".card");if(c)tpOpen(c.dataset.n,c)});
+$("dvg").addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&e.target.classList.contains("card")){e.preventDefault();tpOpen(e.target.dataset.n,e.target)}});
+$("dvl").addEventListener("click",e=>{const b=e.target.closest(".dvc");if(!b)return;const n=b.dataset.n,i=ph(n);
+if(i!==dvTab){dvTab=i;dvDraw()}const c=$("dvg").querySelector(`.card[data-n="${CSS.escape(n)}"]`);tpOpen(n,c)});
+
+// ----- elegir la hora -----
+const QUICK=["18:00","19:00","20:00","21:00","22:00","23:00"];
+function tpClash(n,t){const a=tm(t),b=a+dur(n);return onDay(selDay).filter(x=>x!==n&&plan[x].t).find(x=>{const s=tm(plan[x].t),e=s+dur(x);return a<e&&s<b})}
+function tpDraw(){const n=tpN,w=plan[n],here=w&&w.d===selDay,end=fm(tm(tpT)+dur(n)),cl=tpClash(n,tpT),[hh,mm]=tpT.split(":");
+const nx=nextTime(selDay);
+$("tpi").innerHTML=`<p class="tpk">${h2(D[ph(n)][0])} · ${durT(n)}</p><h3 id="tpH">${h2(n)}</h3>
+<p class="tpd">${DS[fk(selDay).getDay()]} ${fk(selDay).getDate()} de ${MES[fk(selDay).getMonth()]}</p>
+${w&&!here?`<p class="tpw">Ahora está el ${fdate(w.d)}${w.t?" a las "+w.t:""}. Si guardás, pasa a este día.</p>`:""}
+<div class="clk" role="group" aria-label="Hora de inicio">
+<div class="cu"><button type="button" data-st="60" aria-label="Una hora más">▲</button><output id="tpHh">${hh}</output><button type="button" data-st="-60" aria-label="Una hora menos">▼</button></div>
+<span class="cc">:</span>
+<div class="cu"><button type="button" data-st="5" aria-label="Cinco minutos más">▲</button><output id="tpMm">${mm}</output><button type="button" data-st="-5" aria-label="Cinco minutos menos">▼</button></div>
+</div>
+<p class="tpe">Termina tipo <b>${end}</b>${tm(tpT)+dur(n)>=1440?" (pasada la medianoche)":""}</p>
+${cl?`<p class="tpx">Se superpone con <b>${h2(cl)}</b> (${plan[cl].t} a ${endT(cl)}).</p>`:""}
+<div class="qk">${[...new Set([nx,...QUICK])].map(t=>`<button type="button" data-q="${t}" aria-pressed="${t===tpT}">${t===nx&&onDay(selDay).some(x=>x!==n&&plan[x].t)?"Después de la anterior · ":""}${t}</button>`).join("")}</div>
+<label class="tpm">Otra hora exacta <input type="time" id="tpIn" step="300" value="${tpT}"></label>
+<button type="button" class="mbtn" id="tpOk">${here?"Guardar cambio":"Guardar"} · ${tpT}</button>
+${here?`<button type="button" class="tprm" id="tpRm">Quitar de este día</button>`:""}`}
+function tpOpen(n,card){tpN=n;tpFrom=card||null;const w=plan[n];
+tpT=w&&w.d===selDay&&w.t?w.t:nextTime(selDay);
+const o=$("tp"),b=$("tpb"),ph_=$("tpp"),q=pos[n]||wk[n];
+ph_.style.backgroundImage=q&&OK[q]?cu(q):"";ph_.classList.toggle("np",!(q&&OK[q]));ph_.style.setProperty("--h",HUES[ph(n)]);ph_.dataset.t=n;
+tpDraw();o.hidden=false;
+// animación: el póster vuela desde la tarjeta hasta la ventana
+const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+o.animate([{opacity:0},{opacity:1}],{duration:220,easing:"ease-out"});
+if(card&&!reduce){const a=card.getBoundingClientRect(),z=ph_.getBoundingClientRect();
+const dx=a.left-z.left,dy=a.top-z.top,sx=a.width/z.width,sy=a.height/z.height;
+card.style.visibility="hidden";
+ph_.animate([{transform:`translate(${dx}px,${dy}px) scale(${sx},${sy})`,borderRadius:"10px"},{transform:"none",borderRadius:"14px"}],{duration:520,easing:"cubic-bezier(.2,1.15,.3,1)"});
+b.animate([{transform:"translateY(40px) scale(.96)",opacity:0},{transform:"none",opacity:1}],{duration:420,delay:90,easing:"cubic-bezier(.2,1.2,.35,1)",fill:"backwards"})}
+setTimeout(()=>{const x=$("tpOk");if(x)x.focus()},60)}
+function tpClose(saved){const o=$("tp"),ph_=$("tpp"),card=tpFrom&&document.body.contains(tpFrom)?tpFrom:null,n=tpN;
+const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+const fin=()=>{o.hidden=true;if(card)card.style.visibility="";tpN=null;
+const c=$("dvg").querySelector(`.card[data-n="${CSS.escape(n)}"]`);if(c){if(saved)c.animate([{transform:"scale(1)"},{transform:"scale(1.07)"},{transform:"scale(1)"}],{duration:450,easing:"ease-out"});c.focus({preventScroll:true})}};
+if(card&&!reduce){const a=card.getBoundingClientRect(),z=ph_.getBoundingClientRect();
+ph_.animate([{transform:"none"},{transform:`translate(${a.left-z.left}px,${a.top-z.top}px) scale(${a.width/z.width},${a.height/z.height})`}],{duration:380,easing:"cubic-bezier(.5,0,.2,1)",fill:"forwards"}).onfinish=()=>{ph_.getAnimations().forEach(x=>x.cancel());fin()};
+$("tpb").animate([{opacity:1},{opacity:0,transform:"translateY(30px)"}],{duration:200,fill:"forwards"}).onfinish=e=>e.target.cancel();
+o.animate([{opacity:1},{opacity:0}],{duration:380,fill:"forwards"}).onfinish=e=>e.target.cancel()}
+else fin()}
+function tpSet(t){tpT=t;tpDraw()}
+$("tp").addEventListener("click",e=>{if(e.target.id==="tp")return tpClose(false);
+const b=e.target.closest("button");if(!b)return;
+if(b.dataset.st){tpSet(fm(Math.round((tm(tpT)+ +b.dataset.st)/5)*5));const k=b.dataset.st;const nb=$("tpi").querySelector(`[data-st="${k}"]`);if(nb)nb.focus();
+const o=Math.abs(k)===60?$("tpHh"):$("tpMm");o.animate([{transform:`translateY(${k>0?8:-8}px)`,opacity:.3},{transform:"none",opacity:1}],{duration:200,easing:"ease-out"});return}
+if(b.dataset.q){tpSet(b.dataset.q);return}
+if(b.id==="tpX")return tpClose(false);
+if(b.id==="tpOk"){const n=tpN,t=tpT;setPlan(n,selDay,t);dvDraw();tpFrom=$("dvg").querySelector(`.card[data-n="${CSS.escape(n)}"]`)||tpFrom;if(tpFrom)tpFrom.style.visibility="hidden";
+tpClose(true);toast(`Listo: ${n} · ${rdate(selDay)} a las ${t}`);return}
+if(b.id==="tpRm"){const n=tpN;setPlan(n,"");dvDraw();tpFrom=$("dvg").querySelector(`.card[data-n="${CSS.escape(n)}"]`)||tpFrom;if(tpFrom)tpFrom.style.visibility="hidden";tpClose(false);toast(`Quitaste ${n} de este día`)}});
+$("tp").addEventListener("change",e=>{if(e.target.id==="tpIn"&&/^\d\d:\d\d$/.test(e.target.value))tpSet(e.target.value)});
+document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;
+if(!$("tp").hidden){e.stopImmediatePropagation();tpClose(false)}else if(!$("dv").hidden&&$("mo").hidden){e.stopImmediatePropagation();dvClose()}},true);
 
 // arranque
 tabs();grid();stats();loadPosters();
