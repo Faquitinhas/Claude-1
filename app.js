@@ -436,8 +436,12 @@ function navList(){const ns=[...document.querySelectorAll("#grid .card")].map(c=
 function navCan(d){const L=navList(),i=L.indexOf(cur)+d;if(i>=0&&i<L.length)return true;const T=visTabs(),j=T.indexOf(tab)+d;return j>=0&&j<T.length}
 let navT=0;
 function navTo(d){if(!cur)return;let L=navList(),i=L.indexOf(cur)+d;
-if(i<0||i>=L.length){const T=visTabs(),j=T.indexOf(tab)+d;if(j<0||j>=T.length){$("sb").animate([{transform:"translateX(0)"},{transform:`translateX(${-d*14}px)`},{transform:"translateX(0)"}],{duration:260});return}
-goTab(T[j]);L=navList();i=d>0?0:L.length-1}
+if(i<0||i>=L.length){const T=visTabs(),t0=tab;let j=T.indexOf(tab)+d;
+// la lista de la fase nueva sale de la grilla ya dibujada (respeta el filtro); si queda vacía, sigue a la próxima fase
+const gl=()=>[...document.querySelectorAll("#grid .card")].map(c=>c.dataset.n);L=[];
+while(j>=0&&j<T.length){goTab(T[j]);L=gl();if(L.length)break;j+=d}
+if(!L.length){goTab(t0);$("sb").animate([{transform:"translateX(0)"},{transform:`translateX(${-d*14}px)`},{transform:"translateX(0)"}],{duration:260});return}
+i=d>0?0:L.length-1;const tb=document.querySelector(`.tab[data-i="${tab}"]`);if(tb)tb.scrollIntoView({block:"nearest",inline:"nearest"})}
 const n=L[i];if(!n)return;cur=n;editing={};msg="";vt="info";loadBanner(n);draw();clearTimeout(navT);navT=setTimeout(()=>{if(cur===n)loadHist(n)},600);$("sh").scrollTop=0;
 if(!matchMedia("(prefers-reduced-motion: reduce)").matches)$("sb").animate([{opacity:.2,transform:`translateX(${d*40}px)`},{opacity:1,transform:"none"}],{duration:240,easing:"cubic-bezier(.2,.9,.3,1)"})}
 function tabTo(d){const T=visTabs(),j=T.indexOf(tab)+d;if(j<0||j>=T.length)return;goTab(T[j]);const b=document.querySelector(`.tab[data-i="${T[j]}"]`);if(b)b.scrollIntoView({block:"nearest",inline:"nearest"});
