@@ -69,8 +69,10 @@ if(!acct.dirty){acct.dirty=true;saveAcct()}
 stat("busy","Guardando…");clearTimeout(pushT);pushT=setTimeout(push,1200)}
 
 // ----- acciones -----
+// Toma lo que hay escrito en los campos (el autocompletado del navegador a veces no avisa)
+function syncF(){const box=$("mbox");for(const [id,k] of [["mU","u"],["mP","p"],["mP2","p2"]]){const e=box.querySelector("#"+id);if(e)mF[k]=e.value}}
 async function enter(){
-if(mBusy)return;const reg=mMode==="register",user=mF.u.trim(),pass=mF.p;
+if(mBusy)return;syncF();const reg=mMode==="register",user=mF.u.trim(),pass=mF.p;
 if(!user||!pass){mErr="Completá usuario y contraseña.";mDraw();return}
 if(reg&&pass!==mF.p2){mErr="Las contraseñas no coinciden.";mDraw();focusSel("#mP2");return}
 mBusy=true;mErr="";mDraw();
@@ -114,6 +116,7 @@ function fld(id,label,type,val,ac,extra){
 const pw=type==="password";
 return `<label class="fld" for="${id}"><span>${label}</span><div class="${pw?"pw":""}"><input id="${id}" name="${id}" type="${pw&&mPw?"text":type}" value="${h2(val)}" autocomplete="${ac}" ${extra||""}>${pw?`<button type="button" class="eye" data-eye aria-label="${mPw?"Ocultar":"Mostrar"} contraseña" aria-pressed="${mPw}">${mPw?IC.eyeOff:IC.eye}</button>`:""}</div></label>`}
 function mDraw(keepDel){const box=$("mbox"),reg=mMode==="register";let h="";
+syncF();
 const err=mErr?`<p class="merr" role="alert">${h2(mErr)}</p>`:"";
 if(mMode==="login"||reg){
 h=`<button type="button" class="mx" data-close aria-label="Cerrar">×</button>
@@ -148,6 +151,7 @@ function focusSel(s){const e=$("mbox").querySelector(s);if(e)e.focus()}
 function focusFirst(){const b=$("mbox");(mMode==="account"?b:b.querySelector("#mU")||b.querySelector(".mopt")||b).focus()}
 function openM(mode){if(!mOpen)mBack=document.activeElement;mOpen=true;mMode=mode||(acct.token?"account":"login");
 if(mMode!=="account"&&!mErr)mF.p=mF.p2="";
+$("mbox").innerHTML="";
 $("mo").hidden=false;document.body.style.overflow="hidden";mDraw();focusFirst()}
 function closeM(){if(mMode==="merge"&&mMerge)return;mOpen=false;mErr="";mBusy=false;mPw=false;$("mo").hidden=true;
 if(!cur)document.body.style.overflow="";if(mBack&&mBack.focus)mBack.focus();mBack=null}
@@ -162,7 +166,11 @@ if(mErr&&id!=="mDP"){mErr="";const x=$("mbox").querySelector(".merr");if(x)x.rem
 mo.addEventListener("click",e=>{const t=e.target.closest("button");if(!t)return;
 if(t.hasAttribute("data-close"))return closeM();
 if(t.dataset.m&&t.dataset.m!==mMode){mMode=t.dataset.m;mErr="";mDraw();focusSel("#mU");return}
-if(t.hasAttribute("data-eye")){const id=t.parentNode.querySelector("input").id,pos=$(id).selectionStart;mPw=!mPw;mDraw(true);const i=$(id);i.focus();try{i.setSelectionRange(pos,pos)}catch(x){}return}
+if(t.hasAttribute("data-eye")){ // cambia solo el tipo del campo, sin redibujar: así no se pierde lo escrito (ni lo autocompletado)
+const i=t.parentNode.querySelector("input"),pos=i.selectionStart;mPw=!mPw;
+$("mbox").querySelectorAll(".pw").forEach(w=>{const x=w.querySelector("input"),b=w.querySelector("[data-eye]");x.type=mPw?"text":"password";
+b.setAttribute("aria-pressed",mPw);b.setAttribute("aria-label",(mPw?"Ocultar":"Mostrar")+" contraseña");b.innerHTML=mPw?IC.eyeOff:IC.eye});
+i.focus();try{i.setSelectionRange(pos,pos)}catch(x){}return}
 if(t.id==="mSum")return merge(true);
 if(t.id==="mUse")return merge(false);
 if(t.id==="mOut")return logout()});
