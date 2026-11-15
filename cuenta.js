@@ -39,8 +39,9 @@ for(const k of ["seen","sent","qt","plan"]){const b=obj(base[k]),l=obj(loc[k]),o
 for(const n of new Set([...Object.keys(b),...Object.keys(l)]))if(canon(l[n])!==canon(b[n])){if(n in l)o[n]=l[n];else delete o[n]}
 out[k]=o}
 out.fav=(loc.fav||"")!==(base.fav||"")?loc.fav:(srv.fav||"");return out}
+let pushFails=0;
 async function push(){
-if(!acct.token)return;clearTimeout(pushT);
+if(!acct.token)return;clearTimeout(pushT);let failed=false;
 if(syncing){pushT=setTimeout(push,800);return}
 syncing=true;stat("busy","Guardando…");
 try{for(let i=0;i<3;i++){
@@ -48,10 +49,12 @@ acct.dirty=false;const data=collect(),r=await api({action:"save",token:acct.toke
 if(r.conflict){applyData(merge3(acct.base,data,r.data));acct.u=r.u;acct.base=r.data;acct.dirty=true;saveAcct();continue}
 acct.u=r.u;acct.base=data;saveAcct();break}
 acct.dirty?stat("busy","Guardando…"):stat("ok","Progreso guardado en tu cuenta")}
-catch(e){acct.dirty=true;saveAcct();
+catch(e){acct.dirty=true;saveAcct();failed=true;pushFails++;
 if(e.status===401){syncing=false;expired();return}
-stat("off",e.net?"Sin conexión: se guarda cuando vuelva":"No se pudo guardar, se reintenta solo")}
-syncing=false;if(acct.dirty&&acct.token)pushT=setTimeout(push,1500)}
+stat("off",e.net?"Sin conexión: se guarda cuando vuelva":e.status===503?"Cuentas en pausa: tu progreso queda en este dispositivo":"No se pudo guardar, se reintenta en un rato")}
+if(!failed)pushFails=0;
+// si falla, se reintenta cada vez más espaciado (15 s, 30 s, 1 min... hasta 15 min) para no gastar el servidor
+syncing=false;if(acct.dirty&&acct.token)pushT=setTimeout(push,failed?Math.min(15*60e3,15e3*2**(pushFails-1)):1500)}
 async function pull(){
 if(!acct.token||syncing)return;
 if(acct.dirty)return push();
@@ -61,7 +64,7 @@ if(acct.dirty){syncing=false;return push()} // cambió algo mientras esperábamo
 if(r.u>(acct.u||0)){acct.u=r.u;acct.base=r.data;saveAcct();applyData(r.data)}
 stat("ok","Progreso guardado en tu cuenta")}
 catch(e){if(e.status===401){syncing=false;expired();return}
-stat("off",e.net?"Sin conexión: usando lo de este dispositivo":"No se pudo consultar tu cuenta")}
+stat("off",e.net?"Sin conexión: usando lo de este dispositivo":e.status===503?"Cuentas en pausa: usando lo de este dispositivo":"No se pudo consultar tu cuenta")}
 syncing=false}
 function onSave(k){
 if(applying||!acct.token||!SYNC_KEYS.includes(k))return;

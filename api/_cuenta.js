@@ -130,15 +130,16 @@ async function act(body) {
     return { status: 200, body: { ok: true, ...(await fn(b)) } };
   } catch (e) {
     if (e instanceof Fail) return { status: e.status, body: { error: e.message } };
+    if (/suspended|usage.?(quota|threshold)|limits?.exceeded/i.test(String(e && (e.name + " " + e.message)))) // Vercel pausó el almacenamiento por el límite gratis
+      return { status: 503, body: { error: "Las cuentas están en pausa por un tiempo (se llegó al límite gratis del servidor). Tu progreso sigue guardado en este dispositivo y se sube solo cuando vuelvan." } };
     console.error("cuenta:", e);
     return { status: 500, body: { error: "No se pudo completar la operación. Probá de nuevo en un rato." } };
   }
 }
-// Chequeo del almacenamiento: escribe y lee un archivo de prueba.
+// Chequeo del almacenamiento: lee un archivo de prueba.
 async function health() {
   try {
-    await put("health/ping.json", JSON.stringify({ t: Date.now() }), { access: "private", contentType: "application/json", addRandomSuffix: false, allowOverwrite: true });
-    const r = await get("health/ping.json", { access: "private", useCache: false });
+    const r = await get("health/ping.json", { access: "private" }); // solo lectura, para no gastar operaciones
     return { status: 200, body: { ok: !!(r && r.statusCode === 200) } };
   } catch (e) {
     console.error("cuenta health:", e);
