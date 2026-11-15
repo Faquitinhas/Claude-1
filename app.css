@@ -466,12 +466,12 @@ h1{font-size:3.1rem}
 .iab small{display:block;color:var(--mut);font-size:.85rem;line-height:1.35;margin-top:2px}
 .iab>span:nth-child(2){flex:1;min-width:0}
 .iaar{flex:none;color:#c4b3ff;font-size:1.2rem}
-.ia{position:fixed;inset:0;z-index:22;display:grid;place-items:center;padding:0;background:#05041acc;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.ia{position:fixed;inset:0;z-index:22;display:flex;align-items:center;justify-content:center;padding:0;background:#05041acc;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
 .ia.in .iabx{animation:dvin .32s cubic-bezier(.2,1,.3,1)}
 .iabx{box-sizing:border-box;display:flex;flex-direction:column;width:100%;height:100%;max-width:720px;background:radial-gradient(600px 260px at 50% -80px,#8b6bff2e,transparent 70%),var(--bg);padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}
 .iah{display:flex;gap:14px;align-items:center;padding:12px 16px;border-bottom:1px solid #2c265880}
 .iah h2{margin:2px 0 0;font:800 1.3rem/1.1 "Bricolage Grotesque",system-ui,sans-serif;letter-spacing:-.02em}
-.ialog{flex:1;overflow:auto;overscroll-behavior:contain;padding:16px;display:flex;flex-direction:column;gap:12px}
+.ialog{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding:16px;display:flex;flex-direction:column;gap:12px}
 .iaw0{margin:auto 0;text-align:center;padding:10px 4px}
 .iabig{width:64px;height:64px;margin:0 auto 12px;border-radius:20px;display:grid;place-items:center;font-size:1.9rem;background:linear-gradient(135deg,#ff5c85,#8b6bff);box-shadow:0 14px 34px -10px #8b6bffcc}
 .iaw0 h3{margin:0 0 6px;font:800 1.4rem "Bricolage Grotesque",system-ui,sans-serif}

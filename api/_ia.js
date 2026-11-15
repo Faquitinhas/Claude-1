@@ -1,85 +1,51 @@
-// Asistente del calendario: Claude propone qué ver y cuándo; la página muestra la propuesta
-// y el usuario elige qué agregar. Nada se guarda en el calendario desde acá.
-const AnthropicSDK = require("@anthropic-ai/sdk");
-const Anthropic = AnthropicSDK.default || AnthropicSDK;
-
-// A través del AI Gateway de Vercel: en producción se autentica con el token OIDC del proyecto.
-const MODELS = ["anthropic/claude-opus-5-5"];
-const MAX_TURNS = 12, MAX_CHARS = 1200, MAX_CATALOG = 120;
+// Asistente del calendario con una IA gratuita (sin cuenta ni clave).
+// La IA solo traduce el pedido del usuario a preferencias (qué días, a qué hora, qué fases...);
+// la página arma las fechas con esas preferencias y el usuario elige qué agregar.
+const PROVIDERS = [
+  { name: "llm7", url: "https://api.llm7.io/v1/chat/completions", body: m => ({ model: "default", messages: m, max_tokens: 1200 }), timeout: 25e3 },
+  { name: "pollinations", url: "https://text.pollinations.ai/openai", body: m => ({ model: "openai", messages: m, max_tokens: 3000, referrer: "tracker-ucm" }), timeout: 30e3 },
+];
+const MAX_TURNS = 10, MAX_CHARS = 1200;
+const DIAS = ["lun", "mar", "mie", "jue", "vie", "sab", "dom"];
 
 class Fail extends Error { constructor(status, msg) { super(msg); this.status = status; } }
 
-const TOOL = {
-  name: "proponer_plan",
-  description: "Propone al usuario títulos para agregar a su calendario, con día y hora. El usuario revisa la propuesta y elige qué agregar; no se guarda nada solo. Usala cada vez que tengas fechas concretas para sugerir, también al corregir una propuesta anterior (mandá la propuesta completa corregida).",
-  input_schema: {
-    type: "object",
-    properties: {
-      mensaje: { type: "string", description: "Explicación breve para el usuario (1 a 3 oraciones, español rioplatense, sin markdown)." },
-      items: {
-        type: "array",
-        description: "Tandas propuestas, en orden cronológico.",
-        items: {
-          type: "object",
-          properties: {
-            titulo: { type: "string", description: "Título exacto, copiado del catálogo." },
-            fecha: { type: "string", description: "Día en formato AAAA-MM-DD." },
-            hora: { type: "string", description: "Hora de inicio en formato HH:MM (24 h)." },
-            episodios: { type: "integer", description: "Solo para series: cuántos episodios en esta tanda. Omitir en películas." },
-          },
-          required: ["titulo", "fecha", "hora"],
-          additionalProperties: false,
-        },
-      },
-    },
-    required: ["mensaje", "items"],
-    additionalProperties: false,
-  },
-};
-
 const SYSTEM = `Sos el asistente del calendario de "Tracker UCM", una página para seguir el maratón del Universo Cinematográfico de Marvel.
-Ayudás a armar el calendario: el usuario te cuenta cuándo puede ver y qué quiere priorizar, y vos le proponés qué ver cada día y a qué hora.
+El usuario te cuenta cuándo puede ver y qué quiere priorizar. Vos NO calculás fechas ni armás la lista: solo traducís el pedido a preferencias, y la página arma el calendario con eso. Después el usuario elige qué agregar.
 
-Cómo trabajar:
-- Respondé en español rioplatense (vos, tenés), corto y amable. Sin markdown.
-- Cuando tengas lo necesario, llamá a la herramienta proponer_plan con fechas y horas concretas. El usuario revisa la propuesta y elige qué agregar; no prometas que ya quedó guardado.
-- Si falta algo importante para proponer (por ejemplo, qué días o a qué hora puede), hacé una sola pregunta breve en vez de inventar. Si el pedido es razonablemente claro, proponé directamente con supuestos sensatos y mencionálos en el mensaje.
-- Usá solo títulos del catálogo, escritos exactamente igual.
-- Respetá el orden de estreno salvo que el usuario pida otra cosa. Salteá lo que ya vio, salvo que pida volver a verlo.
-- No propongas títulos marcados como "próximamente" (todavía no se estrenaron).
-- Las series se ven por tandas de episodios: usá "episodios" en cada tanda, sin pasarte de los que le quedan por programar. Una serie puede repartirse en varios días.
-- No superpongas horarios: cada tanda empieza cuando termina la anterior del mismo día (más unos 15 minutos de pausa). Tené en cuenta lo que ya está en el calendario. Evitá terminar después de las 2 de la mañana salvo que lo pida.
-- No propongas fechas anteriores a hoy.
-- Como mucho unas 25 tandas por propuesta; si el plan es más largo, proponé la primera parte y ofrecé seguir.
-- Si te piden algo que no tiene que ver con el calendario o con Marvel, respondé breve y volvé al tema.`;
+Respondé SOLO con un objeto JSON válido, sin texto antes ni después y sin markdown, con estas claves:
+- "mensaje": texto breve para el usuario, en español rioplatense (vos, tenés), sin markdown. Contá qué vas a armar, o hacé UNA pregunta corta si falta algo importante.
+- "listo": true si ya se puede armar la propuesta; false si necesitás preguntar algo antes.
+- "desde": fecha de inicio AAAA-MM-DD (si no la dice, mañana).
+- "hasta": fecha límite AAAA-MM-DD, o null si no hay.
+- "horarios": lista de {"dias": lista con algunos de "lun","mar","mie","jue","vie","sab","dom"; "hora": "HH:MM"; "cantidad": cuántas pelis o tandas de serie seguidas ese día}. Entre semana = lun a vie. Finde = sab y dom. "A la noche" = 21:00, "a la tarde" = 16:00, "a la mañana" = 10:00, si no dice hora.
+- "fases": fases a incluir, por ejemplo ["Fase 4"], o [] para todas en orden de estreno.
+- "titulos": títulos puntuales a incluir, copiados exactos del catálogo, o [].
+- "series": true para incluir series, false para solo películas (por defecto true).
+- "episodiosPorTanda": episodios por tanda de serie (por defecto 2).
+- "xmen": true solo si pide la saga X-Men.
+- "revistas": true solo si quiere volver a ver lo que ya vio.
+- "fijos": pedidos para un día concreto, como [{"titulo":"WandaVision","dia":"dom","hora":"21:00","episodios":3}] (también podés usar "fecha":"AAAA-MM-DD" en vez de "dia"), o [].
+
+Si el usuario pide un cambio sobre lo anterior, devolvé las preferencias completas actualizadas (no solo el cambio).
+Si pregunta algo que no tiene que ver con el calendario o con Marvel, contestá breve en "mensaje" con "listo": false.`;
 
 const clip = (s, n) => String(s == null ? "" : s).slice(0, n);
-const okDate = s => /^\d{4}-\d\d-\d\d$/.test(s) && !isNaN(Date.parse(s + "T00:00:00Z"));
-const okTime = s => /^([01]\d|2[0-3]):[0-5]\d$/.test(s);
+const okDate = s => typeof s === "string" && /^\d{4}-\d\d-\d\d$/.test(s) && !isNaN(Date.parse(s + "T00:00:00Z"));
+const okTime = s => typeof s === "string" && /^([01]?\d|2[0-3]):[0-5]\d$/.test(s);
+const hhmm = s => okTime(s) ? s.padStart(5, "0") : null;
+const int = (v, a, b, d) => { v = Math.round(+v); return Number.isFinite(v) ? Math.min(b, Math.max(a, v)) : d; };
 
-// Arma el contexto (catálogo, calendario actual, fecha de hoy) que manda la página.
 function contextText(ctx) {
   const c = ctx && typeof ctx === "object" ? ctx : {};
-  const today = okDate(c.hoy) ? c.hoy : new Date().toISOString().slice(0, 10);
-  const cat = Array.isArray(c.catalogo) ? c.catalogo.slice(0, MAX_CATALOG) : [];
-  const plan = Array.isArray(c.plan) ? c.plan.slice(0, 200) : [];
-  const lines = cat.map(t => {
-    const parts = [clip(t.titulo, 80), clip(t.fase, 30), t.anio ? String(+t.anio || "") : ""];
-    if (t.serie) parts.push(`serie: ${+t.episodios || 0} episodios de ~${+t.minEp || 0} min, ya programados ${+t.programados || 0}`);
-    else parts.push(`película de ${+t.minutos || 0} min`);
-    if (t.vista) parts.push("YA VISTA");
-    if (t.proximamente) parts.push("próximamente (no estrenada)");
-    if (t.enCalendario && !t.serie) parts.push("ya tiene fecha");
-    return "- " + parts.filter(Boolean).join(" · ");
-  });
-  const pl = plan.map(p => `- ${clip(p.fecha, 10)} ${clip(p.hora, 5) || "sin hora"} → ${clip(p.titulo, 80)}${p.episodios ? ` (${+p.episodios} ep)` : ""}, termina ${clip(p.fin, 5)}`);
-  return `Hoy es ${today} (${clip(c.diaSemana, 12)}).
-
-Catálogo, en orden de estreno:
-${lines.join("\n") || "(vacío)"}
-
-Lo que ya está en el calendario:
-${pl.join("\n") || "(nada todavía)"}`;
+  const hoy = okDate(c.hoy) ? c.hoy : new Date().toISOString().slice(0, 10);
+  const prox = Array.isArray(c.proximos) ? c.proximos.slice(0, 21).map(x => clip(x, 16)).join(", ") : "";
+  const fases = Array.isArray(c.fases) ? c.fases.slice(0, 12).map(x => clip(x, 20)).join(", ") : "";
+  const tit = Array.isArray(c.titulos) ? c.titulos.slice(0, 120).map(x => clip(x, 90)).join("; ") : "";
+  return `Hoy es ${hoy} (${clip(c.diaSemana, 12)}). Próximos días: ${prox}.
+Fases: ${fases}.
+Catálogo en orden de estreno (las series dicen "serie"): ${tit}.
+${c.resumen ? "Situación del usuario: " + clip(c.resumen, 400) : ""}`;
 }
 
 function cleanTurns(turns) {
@@ -87,7 +53,7 @@ function cleanTurns(turns) {
   const out = [];
   for (const t of turns.slice(-MAX_TURNS)) {
     if (!t || (t.role !== "user" && t.role !== "assistant")) continue;
-    const text = clip(t.text, MAX_CHARS).trim();
+    const text = clip(t.text, t.role === "assistant" ? 2500 : MAX_CHARS).trim();
     if (!text) continue;
     if (out.length && out[out.length - 1].role === t.role) out[out.length - 1].content += "\n" + text;
     else out.push({ role: t.role, content: text });
@@ -97,75 +63,88 @@ function cleanTurns(turns) {
   return out;
 }
 
-function cleanItems(items) {
-  if (!Array.isArray(items)) return [];
-  return items.slice(0, 40).map(i => ({
-    titulo: clip(i && i.titulo, 100),
-    fecha: clip(i && i.fecha, 10),
-    hora: clip(i && i.hora, 5),
-    ...(Number.isInteger(i && i.episodios) && i.episodios > 0 ? { episodios: Math.min(i.episodios, 60) } : {}),
-  })).filter(i => i.titulo && okDate(i.fecha) && okTime(i.hora));
+// Saca el primer objeto JSON de la respuesta (algunas IAs lo envuelven en ```json)
+function parseJSON(text) {
+  const s = String(text || "").replace(/```(?:json)?/gi, "");
+  const a = s.indexOf("{"), b = s.lastIndexOf("}");
+  if (a < 0 || b <= a) return null;
+  try { return JSON.parse(s.slice(a, b + 1)); } catch (e) { return null; }
 }
 
-let client = null;
-function getClient(oidc) {
-  const apiKey = process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN || oidc;
-  if (!apiKey) throw new Fail(503, "La IA no está configurada en el servidor.");
-  if (!client || client._key !== apiKey) { client = new Anthropic({ apiKey, baseURL: "https://ai-gateway.vercel.sh", maxRetries: 1, timeout: 90e3 }); client._key = apiKey; }
-  return client;
+// Deja solo valores con sentido; la página vuelve a validar todo
+function cleanSpec(j) {
+  const o = j && typeof j === "object" ? j : {};
+  const dias = a => (Array.isArray(a) ? a : [a]).map(x => clip(x, 4).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").slice(0, 3)).filter(x => DIAS.includes(x));
+  const horarios = (Array.isArray(o.horarios) ? o.horarios : []).slice(0, 14).map(h => ({ dias: [...new Set(dias(h && h.dias))], hora: hhmm(h && h.hora) || "21:00", cantidad: int(h && h.cantidad, 1, 6, 1) })).filter(h => h.dias.length);
+  const fijos = (Array.isArray(o.fijos) ? o.fijos : []).slice(0, 20).map(f => ({
+    titulo: clip(f && f.titulo, 100), ...(okDate(f && f.fecha) ? { fecha: f.fecha } : {}), ...(dias(f && f.dia)[0] ? { dia: dias(f.dia)[0] } : {}),
+    ...(hhmm(f && f.hora) ? { hora: hhmm(f.hora) } : {}), ...(f && f.episodios ? { episodios: int(f.episodios, 1, 20, 2) } : {}),
+  })).filter(f => f.titulo);
+  return {
+    listo: o.listo !== false && (horarios.length > 0 || fijos.length > 0),
+    desde: okDate(o.desde) ? o.desde : null,
+    hasta: okDate(o.hasta) ? o.hasta : null,
+    horarios, fijos,
+    fases: (Array.isArray(o.fases) ? o.fases : []).slice(0, 12).map(x => clip(x, 20)),
+    titulos: (Array.isArray(o.titulos) ? o.titulos : []).slice(0, 60).map(x => clip(x, 100)),
+    series: o.series !== false,
+    episodiosPorTanda: int(o.episodiosPorTanda, 1, 12, 2),
+    xmen: o.xmen === true,
+    revistas: o.revistas === true,
+  };
 }
 
-async function ask(body, oidc) {
+const wait = ms => new Promise(r => setTimeout(r, ms));
+async function callProvider(p, messages) {
+  for (let i = 0; i < 2; i++) {
+    const r = await fetch(p.url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(p.body(messages)), signal: AbortSignal.timeout(p.timeout) });
+    const text = await r.text();
+    if (r.status === 429 && i === 0) { // límite por conexión: esperar un poco y reintentar una vez
+      let s = 4; try { s = +JSON.parse(text).error.retry_after || 4; } catch (e) {}
+      await wait(Math.min(8, Math.max(1, s)) * 1000); continue;
+    }
+    if (!r.ok) throw new Error(`${p.name} ${r.status}: ${text.slice(0, 200)}`);
+    const j = JSON.parse(text), content = j && j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content;
+    if (!content) throw new Error(`${p.name}: respuesta vacía`);
+    return content;
+  }
+  throw new Error(`${p.name}: sin turno`);
+}
+
+async function ask(body) {
   try {
     const b = body && typeof body === "object" ? body : {};
     const turns = cleanTurns(b.turnos);
-    const ctx = contextText(b.contexto);
-    // El contexto va como primer bloque del primer mensaje del usuario (cambia con cada pedido).
-    turns[0] = { role: "user", content: [{ type: "text", text: ctx }, { type: "text", text: turns[0].content }] };
-    const c = getClient(oidc);
-    let res = null, lastErr = null;
-    for (const model of MODELS) {
+    const messages = [{ role: "system", content: SYSTEM + "\n\n" + contextText(b.contexto) }, ...turns];
+    let spec = null, raw = "", errs = [];
+    for (const p of PROVIDERS) {
       try {
-        res = await c.messages.create({
-          model, max_tokens: 12000,
-          system: SYSTEM, tools: [TOOL], tool_choice: { type: "auto" },
-          messages: turns,
-        });
-        break;
-      } catch (e) {
-        lastErr = e;
-        if (e instanceof Anthropic.NotFoundError || e instanceof Anthropic.BadRequestError) continue; // probá el siguiente modelo
-        throw e;
-      }
+        raw = await callProvider(p, messages);
+        const j = parseJSON(raw);
+        if (j) { spec = { mensaje: clip(j.mensaje, 800).trim(), ...cleanSpec(j) }; break; }
+        errs.push(p.name + ": no devolvió JSON");
+      } catch (e) { errs.push(String(e && e.message || e).slice(0, 200)); }
     }
-    if (!res) throw lastErr || new Error("sin respuesta");
-    if (res.stop_reason === "refusal") return { status: 200, body: { ok: true, reply: "Eso no lo puedo ayudar a armar. Contame qué días y horarios tenés libres y te propongo un plan.", items: [] } };
-    let reply = "", items = [];
-    for (const blk of res.content) {
-      if (blk.type === "text") reply += (reply ? "\n" : "") + blk.text.trim();
-      if (blk.type === "tool_use" && blk.name === "proponer_plan" && blk.input && typeof blk.input === "object") {
-        if (blk.input.mensaje) reply = String(blk.input.mensaje).trim() + (reply ? "\n" + reply : "");
-        items = cleanItems(blk.input.items);
-      }
+    if (!spec) {
+      console.error("ia:", errs.join(" | "));
+      return { status: 502, body: { error: "La IA gratuita no respondió. Probá de nuevo en unos segundos." } };
     }
-    if (res.stop_reason === "max_tokens" && !items.length) reply = reply || "Se me hizo muy largo el plan. Probá pedirme una parte (por ejemplo, una fase o una semana).";
-    return { status: 200, body: { ok: true, reply: clip(reply, 1500) || "Listo, mirá la propuesta.", items } };
+    return { status: 200, body: { ok: true, reply: spec.mensaje || (spec.listo ? "Te armé una propuesta." : "¿Me contás qué días y a qué hora podés?"), spec } };
   } catch (e) {
     if (e instanceof Fail) return { status: e.status, body: { error: e.message } };
-    if (e instanceof Anthropic.RateLimitError) return { status: 429, body: { error: "La IA está con mucha demanda. Probá de nuevo en un minuto." } };
-    if (e instanceof Anthropic.AuthenticationError || e instanceof Anthropic.PermissionDeniedError) { console.error("ia auth:", e.status, e.message); return { status: 503, body: { error: "La IA no está disponible en este momento." } }; }
-    if (e instanceof Anthropic.APIError) { console.error("ia api:", e.status, e.message); return { status: 502, body: { error: "La IA no respondió bien. Probá de nuevo." } }; }
     console.error("ia:", e);
     return { status: 500, body: { error: "No se pudo hablar con la IA. Probá de nuevo en un rato." } };
   }
 }
-// Chequeo: una consulta mínima para saber si la IA responde con las credenciales del servidor.
-async function health(oidc) {
-  try {
-    const r = await getClient(oidc).messages.create({ model: MODELS[0], max_tokens: 400, messages: [{ role: "user", content: "Respondé solo: ok" }] });
-    return { status: 200, body: { ok: true, model: r.model, stop: r.stop_reason } };
-  } catch (e) {
-    return { status: 502, body: { ok: false, type: e && e.constructor && e.constructor.name, status: e && e.status, error: String(e && e.message || e).slice(0, 300) } };
+
+// Chequeo: pregunta algo mínimo para saber si la IA gratuita responde
+async function health() {
+  const out = {};
+  for (const p of PROVIDERS.slice(0, 1)) {
+    const t = Date.now();
+    try { const c = await callProvider(p, [{ role: "user", content: 'Respondé solo con este JSON: {"ok":true}' }]); out[p.name] = { ok: !!parseJSON(c), ms: Date.now() - t }; }
+    catch (e) { out[p.name] = { ok: false, ms: Date.now() - t, error: String(e && e.message || e).slice(0, 200) }; }
   }
+  return { status: 200, body: out };
 }
-module.exports = { ask, health, contextText, cleanTurns, cleanItems };
+module.exports = { ask, health, contextText, cleanTurns, cleanSpec, parseJSON };

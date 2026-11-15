@@ -261,18 +261,55 @@ if(!$("tp").hidden){e.stopImmediatePropagation();tpClose(false)}else if(!$("dv")
 // ---------- Asistente con IA: propone fechas, vos elegís qué agregar ----------
 let iaTurns=[],iaBusy=false,iaProps=[]; // iaProps[i] = {items:[...], done:false}
 const IA_SUG=["Quiero ver lo que me falta: una peli por noche a las 22","Los fines de semana puedo ver 3 pelis desde las 15","Quiero terminar la Fase 4 antes de fin de mes","Metele las series de a 2 episodios entre semana"];
-function iaCtx(){const hoy=fk(TODAY);
-const catalogo=D.flatMap(p=>p[1].filter(vis).map(m=>{const n=m[0],s=!!EP[n];
-return {titulo:n,fase:p[0],anio:m[1],serie:s,...(s?{episodios:EP[n][0],minEp:EP[n][1],programados:epDone(n)}:{minutos:R[n]||120}),vista:!!seen[n],proximamente:isSoon(n),enCalendario:keysOf(n).length>0}}));
-const agenda=pkeys().sort((a,b)=>ord(a).localeCompare(ord(b))).map(k=>({fecha:plan[k].d,hora:plan[k].t,titulo:bn(k),...(EP[bn(k)]?{episodios:epOf(k)}:{}),fin:endT(k)}));
-return {hoy:TODAY,diaSemana:DS[hoy.getDay()],catalogo,plan:agenda}}
-const iaFind=t=>{t=String(t||"").trim();if(ALL.includes(t))return t;const l=t.toLowerCase();return ALL.find(n=>n.toLowerCase()===l)||null};
-// valida y prepara cada tanda propuesta
-function iaPrep(items){return items.map(i=>{const n=iaFind(i.titulo);if(!n||i.fecha<TODAY)return null;
-const ser=!!EP[n],e=ser?Math.max(1,Math.min(EP[n][0],i.episodios||defEp(n))):0;
-const a=tm(i.hora),b=a+(ser?e*EP[n][1]:(R[n]||120));
-const cl=pkeys().filter(k=>plan[k].d===i.fecha&&plan[k].t&&!(!ser&&k===n)).find(k=>{const s=tm(plan[k].t);return a<s+dur(k)&&s<b});
-return {n,d:i.fecha,t:i.hora,e,ser,fin:fm(b),cl:cl||null,mv:!ser&&plan[n]?plan[n]:null,seen:!!seen[n],on:!seen[n],added:false}}).filter(Boolean)}
+const nrm=x=>String(x||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g," ").trim();
+function iaCtx(){const hoy=fk(TODAY),prox=[];for(let i=0;i<21;i++){const d=new Date(hoy);d.setDate(d.getDate()+i);prox.push(`${DC[d.getDay()].replace("mié","mie").replace("sáb","sab")} ${dk(d)}`)}
+const titulos=D.flatMap(p=>p[1].filter(m=>!QT[m[0]]).map(m=>m[0]+(m[2]?" (serie)":"")+(seen[m[0]]?" (vista)":"")+(isSoon(m[0])?" (próximamente)":"")));
+const vistas=Object.keys(seen).length,conFecha=pkeys().length;
+return {hoy:TODAY,diaSemana:DS[hoy.getDay()],proximos:prox,fases:D.map(p=>p[0]),titulos,resumen:`Vio ${vistas} títulos. Tiene ${conFecha} cosas en el calendario.`}}
+// busca un título aunque venga escrito un poco distinto
+const iaFind=t=>{const q=nrm(t);if(!q)return null;let hit=ALL.find(n=>nrm(n)===q);if(hit)return hit;
+hit=ALL.find(n=>nrm(n).startsWith(q)||q.startsWith(nrm(n)));if(hit)return hit;
+return ALL.find(n=>W[n]&&nrm(en(n))===q)||ALL.find(n=>nrm(n).includes(q)&&q.length>=4)||null};
+const WD={dom:0,lun:1,mar:2,mie:3,jue:4,vie:5,sab:6};
+// Arma las tandas con las preferencias que entendió la IA: fechas exactas, sin superposiciones y respetando lo que ya está en el calendario
+function iaBuild(sp){const out=[],note=[];const start=sp.desde&&sp.desde>=TODAY?sp.desde:dk(new Date(fk(TODAY).getTime()+864e5));
+const lim=sp.hasta&&sp.hasta>=start?sp.hasta:null,days=lim?Math.round((fk(lim)-fk(start))/864e5)+1:60;
+// lo que ya ocupa cada día
+const busy={};const occ=(d,a,b)=>{(busy[d]=busy[d]||[]).push([a,b])};
+for(const k of pkeys())if(plan[k].t){const a=tm(plan[k].t);occ(plan[k].d,a,a+dur(k))}
+const left={};const remEp=n=>left[n]!==undefined?left[n]:(left[n]=Math.max(0,EP[n][0]-epDone(n)));
+const minsOf=(n,e)=>EP[n]?e*EP[n][1]:(R[n]||120);
+const fit=(d,t,len)=>{let moved=true;while(moved){moved=false;for(const[a,b]of busy[d]||[])if(t<b&&a<t+len){t=Math.ceil((b+15)/5)*5;moved=true}}return t};
+const usedMovie=new Set(),place=(n,d,t,e,mx)=>{const len=minsOf(n,e);t=fit(d,t,len);if(t>=1440||t>(mx===undefined?1380:mx))return false; // no arrancar después de las 23 (salvo que lo pida)occ(d,t,t+len);
+out.push({n,d,t:fm(t),e,ser:!!EP[n],fin:fm(t+len),cl:null,mv:!EP[n]&&plan[n]?plan[n]:null,seen:!!seen[n],on:!seen[n],added:false});
+if(EP[n])left[n]=remEp(n)-e;else usedMovie.add(n);return t+len+15};
+// 1) pedidos puntuales
+for(const f of sp.fijos||[]){const n=iaFind(f.titulo);if(!n||isSoon(n)){if(f.titulo)note.push(`No encontré "${f.titulo}".`);continue}
+let d=f.fecha&&f.fecha>=TODAY?f.fecha:null;
+if(!d&&f.dia!==undefined&&WD[f.dia]!==undefined){const x=fk(start);while(x.getDay()!==WD[f.dia])x.setDate(x.getDate()+1);d=dk(x)}
+if(!d)d=start;const wd=fk(d).getDay(),h=(sp.horarios||[]).find(h=>h.dias.some(x=>WD[x]===wd));
+let e=0;if(EP[n]){if(remEp(n)<=0){note.push(`${n} ya está toda programada.`);continue}e=Math.min(remEp(n),f.episodios||sp.episodiosPorTanda||2)}
+const t0=tm(f.hora||(h&&h.hora)||"21:00");if(place(n,d,t0,e,1435)===false)note.push(`No encontré lugar para ${n} ese día.`)}
+// 2) lo que hay que ver, en orden de estreno
+const fs=(sp.fases||[]).map(nrm).filter(Boolean),ts=(sp.titulos||[]).map(iaFind).filter(Boolean);
+let queue=[];
+if(ts.length)queue=ALL.filter(n=>ts.includes(n));
+else D.forEach(p=>{const pf=nrm(p[0]);if(fs.length?!fs.some(x=>x===pf||pf.includes(x)||x.includes(pf)):(p[2]&&!sp.xmen))return;
+p[1].forEach(m=>queue.push(m[0]))});
+queue=queue.filter(n=>!QT[n]&&!isSoon(n)&&(sp.revistas||!seen[n])&&(EP[n]?sp.series!==false&&remEp(n)>0:!usedMovie.has(n)&&!keysOf(n).length));
+const total=queue.length;let qi=0;
+const next=()=>{while(qi<queue.length){const n=queue[qi];if(EP[n]&&remEp(n)<=0){qi++;continue}if(!EP[n]&&usedMovie.has(n)){qi++;continue}return n}return null};
+for(let i=0;i<days&&out.length<40&&next();i++){const x=fk(start);x.setDate(x.getDate()+i);const d=dk(x),wd=x.getDay();
+for(const h of (sp.horarios||[]).filter(h=>h.dias.some(y=>WD[y]===wd)).sort((a,b)=>a.hora.localeCompare(b.hora))){let t=tm(h.hora);
+for(let c=0;c<h.cantidad&&out.length<40;c++){const n=next();if(!n)break;const e=EP[n]?Math.min(remEp(n),sp.episodiosPorTanda||2):0;
+const r=place(n,d,t,e,Math.max(tm(h.hora),1380));if(r===false)break;t=r;if(!EP[n]||remEp(n)<=0)qi++}}}
+const pend=queue.filter(n=>EP[n]?remEp(n)>0:!usedMovie.has(n)).length;
+if(total&&pend)note.push(lim?`Antes del ${fdate(lim)} no entra todo: quedan ${pend} ${pend===1?"título":"títulos"} sin lugar. Podés pedirme más días u horarios.`:out.length>=40?`Te propongo las primeras 40; cuando las agregues, pedime que siga.`:`Quedan ${pend} sin lugar.`);
+if(!total&&!(sp.fijos||[]).length)note.push("No encontré nada pendiente con ese filtro: puede que ya lo hayas visto o que ya esté en el calendario.");
+out.sort((a,b)=>(a.d+a.t).localeCompare(b.d+b.t));
+// marcar choques con lo que ya estaba (por si un pedido puntual cayó encima)
+for(const p of out){const a=tm(p.t),b=a+minsOf(p.n,p.e);p.cl=pkeys().filter(k=>plan[k].d===p.d&&plan[k].t&&!(!p.ser&&k===p.n)).find(k=>{const s=tm(plan[k].t);return a<s+dur(k)&&s<b})||null}
+return {items:out,note:note.join(" ")}}
 function iaOpen(){const o=$("ia");o.hidden=false;document.body.style.overflow="hidden";o.classList.remove("in");void o.offsetWidth;o.classList.add("in");iaDraw();setTimeout(()=>$("iaIn").focus(),60)}
 function iaClose(){const o=$("ia");o.hidden=true;if($("dv").hidden&&$("ov").hidden&&$("mo").hidden)document.body.style.overflow="";$("iaOpen").focus()}
 function iaItem(p,i,j){const q=pos[p.n]||wk[p.n],img=q&&OK[q]?`style="background-image:${h2(cu(q))}"`:"";
@@ -296,12 +333,12 @@ let r;try{const res=await fetch("/api/ia",{method:"POST",headers:{"Content-Type"
 body:JSON.stringify({turnos:iaTurns.filter(t=>!t.err).map(t=>({role:t.role,text:t.text})),contexto:iaCtx()})});
 r=await res.json().catch(()=>null);if(!res.ok||!r||!r.ok)throw new Error(r&&r.error||"La IA no respondió. Probá de nuevo.")}
 catch(e){iaBusy=false;iaTurns.push({role:"assistant",text:e.message&&!/fetch|network/i.test(e.message)?e.message:"Sin conexión con la IA. Probá de nuevo.",err:true});iaDraw();return}
-iaBusy=false;const items=iaPrep(r.items||[]),reply=String(r.reply||"").trim();
-// en el historial queda también la propuesta, para que la IA sepa qué sugirió si le pedís cambios
-const sum=items.length?"\n[Propuesta enviada: "+items.map(p=>`${p.n} ${p.d} ${p.t}${p.ser?" ("+p.e+" ep)":""}`).join("; ")+"]":"";
-const t={role:"assistant",text:(reply||"Mirá la propuesta.")+sum,show:reply||"Mirá la propuesta."};
+iaBusy=false;const sp=r.spec||{},reply=String(r.reply||"").trim();let items=[],note="";
+if(sp.listo){const B=iaBuild(sp);items=B.items;note=B.note}
+// en el historial queda lo que entendió la IA, para que pueda corregirlo si le pedís cambios
+const t={role:"assistant",text:(reply||"Listo.")+"\nPreferencias: "+JSON.stringify(sp),show:(reply||"Te armé una propuesta.")+(note?"\n"+note:"")};
 if(items.length){iaProps.push({items});t.pi=iaProps.length-1}
-else if((r.items||[]).length)t.show+="\n(No pude armar tandas válidas con esa propuesta. Probá pedírmelo de otra forma.)";
+else if(sp.listo&&!note)t.show+="\nNo encontré lugar para nada con esos horarios. Probá con otros días u horas.";
 iaTurns.push(t);iaDraw();
 const last=$("iaLog").querySelector(".iam.a:last-of-type");if(last)last.animate([{opacity:0,transform:"translateY(10px)"},{opacity:1,transform:"none"}],{duration:280,easing:"ease-out"})}
 function iaAdd(i){const P=iaProps[i],sel=P.items.filter(x=>x.on&&!x.added);if(!sel.length)return;
