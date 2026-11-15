@@ -262,10 +262,6 @@ if(!$("tp").hidden){e.stopImmediatePropagation();tpClose(false)}else if(!$("dv")
 let iaTurns=[],iaBusy=false,iaProps=[]; // iaProps[i] = {items:[...], done:false}
 const IA_SUG=["Quiero ver lo que me falta: una peli por noche a las 22","Los fines de semana puedo ver 3 pelis desde las 15","Quiero terminar la Fase 4 antes de fin de mes","Metele las series de a 2 episodios entre semana"];
 const nrm=x=>String(x||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g," ").trim();
-function iaCtx(){const hoy=fk(TODAY),prox=[];for(let i=0;i<21;i++){const d=new Date(hoy);d.setDate(d.getDate()+i);prox.push(`${DC[d.getDay()].replace("mié","mie").replace("sáb","sab")} ${dk(d)}`)}
-const titulos=D.flatMap(p=>p[1].filter(m=>!QT[m[0]]).map(m=>m[0]+(m[2]?" (serie)":"")+(seen[m[0]]?" (vista)":"")+(isSoon(m[0])?" (próximamente)":"")));
-const vistas=Object.keys(seen).length,conFecha=pkeys().length;
-return {hoy:TODAY,diaSemana:DS[hoy.getDay()],proximos:prox,fases:D.map(p=>p[0]),titulos,resumen:`Vio ${vistas} títulos. Tiene ${conFecha} cosas en el calendario.`}}
 // busca un título aunque venga escrito un poco distinto
 const iaFind=t=>{const q=nrm(t);if(!q)return null;let hit=ALL.find(n=>nrm(n)===q);if(hit)return hit;
 hit=ALL.find(n=>nrm(n).startsWith(q)||q.startsWith(nrm(n)));if(hit)return hit;
@@ -302,14 +298,104 @@ const next=()=>{while(qi<queue.length){const n=queue[qi];if(EP[n]&&remEp(n)<=0){
 for(let i=0;i<days&&out.length<40&&next();i++){const x=fk(start);x.setDate(x.getDate()+i);const d=dk(x),wd=x.getDay();
 for(const h of (sp.horarios||[]).filter(h=>h.dias.some(y=>WD[y]===wd)).sort((a,b)=>a.hora.localeCompare(b.hora))){let t=tm(h.hora);
 for(let c=0;c<h.cantidad&&out.length<40;c++){const n=next();if(!n)break;const e=EP[n]?Math.min(remEp(n),sp.episodiosPorTanda||2):0;
-const r=place(n,d,t,e,Math.max(tm(h.hora),1380));if(r===false)break;t=r;if(!EP[n]||remEp(n)<=0)qi++}}}
+const r=place(n,d,t,e,Math.min(1435,Math.max(tm(h.hora)+(h.cantidad-1)*150,1380)));if(r===false)break;t=r;if(!EP[n]||remEp(n)<=0)qi++}}}
 const pend=queue.filter(n=>EP[n]?remEp(n)>0:!usedMovie.has(n)).length;
-if(total&&pend)note.push(lim?`Antes del ${fdate(lim)} no entra todo: quedan ${pend} ${pend===1?"título":"títulos"} sin lugar. Podés pedirme más días u horarios.`:out.length>=40?`Te propongo las primeras 40; cuando las agregues, pedime que siga.`:`Quedan ${pend} sin lugar.`);
+if(total&&pend)note.push(lim?`Antes del ${fdate(lim)} no entra todo: quedan ${pend} ${pend===1?"título":"títulos"} sin lugar. Podés pedirme más días u horarios.`:out.length>=40?`Te propongo las primeras 40; cuando las agregues, pedime que siga.`:`En los próximos dos meses no entra todo: quedan ${pend} sin lugar. Cuando agregues estas, pedime que siga.`);
 if(!total&&!(sp.fijos||[]).length)note.push("No encontré nada pendiente con ese filtro: puede que ya lo hayas visto o que ya esté en el calendario.");
 out.sort((a,b)=>(a.d+a.t).localeCompare(b.d+b.t));
 // marcar choques con lo que ya estaba (por si un pedido puntual cayó encima)
 for(const p of out){const a=tm(p.t),b=a+minsOf(p.n,p.e);p.cl=pkeys().filter(k=>plan[k].d===p.d&&plan[k].t&&!(!p.ser&&k===p.n)).find(k=>{const s=tm(plan[k].t);return a<s+dur(k)&&s<b})||null}
 return {items:out,note:note.join(" ")}}
+// --- IA gratuita, llamada desde el navegador (cada persona usa su propia cuota gratis, sin cuenta ni clave) ---
+const IA_PROV=[
+ {name:"llm7",url:"https://api.llm7.io/v1/chat/completions",body:m=>({model:"default",messages:m,max_tokens:900}),ms:30e3},
+ {name:"pollinations",url:"https://text.pollinations.ai/openai",body:m=>({model:"openai",messages:m,max_tokens:2500,referrer:"tracker-ucm"}),ms:30e3}];
+const IA_SYS=`Sos el asistente del calendario de "Tracker UCM" (maratón de Marvel). El usuario te cuenta cuándo puede ver. Vos NO calculás fechas: solo traducís el pedido a preferencias y la página arma el calendario.
+Respondé SOLO un objeto JSON válido, sin texto alrededor ni markdown, con estas claves:
+"mensaje" (texto breve en español rioplatense, con vos; contá qué vas a armar o hacé UNA pregunta corta),
+"listo" (true si ya se puede armar; false solo si no dijo NINGÚN día ni horario),
+"desde" (AAAA-MM-DD o null = mañana), "hasta" (AAAA-MM-DD o null),
+"horarios" (lista de {"dias":[de "lun","mar","mie","jue","vie","sab","dom"],"hora":"HH:MM","cantidad":número de pelis o tandas seguidas}; entre semana = lun a vie; finde = sab y dom; a la noche = 21:00, a la tarde = 16:00),
+"fases" (ej. ["Fase 4"], o [] = todas en orden), "titulos" (SOLO si quiere ver únicamente esos títulos; si no, []),
+"series" (true salvo que pida solo películas), "episodiosPorTanda" (por defecto 2), "xmen" (true solo si lo pide), "revistas" (true solo si quiere volver a ver lo visto),
+"fijos" (cosas para un día concreto: [{"titulo","dia" o "fecha","hora","episodios"}], o []).
+No preguntes por cosas con valor por defecto. Si pide un cambio, devolvé las preferencias completas actualizadas.
+Ejemplo. Pedido: "Entre semana a las 21 una peli, el sábado 3 desde las 15 y WandaVision de a 3 episodios el domingo"
+{"mensaje":"Dale: una por noche de lunes a viernes a las 21, tres el sábado desde las 15 y WandaVision el domingo.","listo":true,"desde":null,"hasta":null,"horarios":[{"dias":["lun","mar","mie","jue","vie"],"hora":"21:00","cantidad":1},{"dias":["sab"],"hora":"15:00","cantidad":3}],"fases":[],"titulos":[],"series":true,"episodiosPorTanda":2,"xmen":false,"revistas":false,"fijos":[{"titulo":"WandaVision","dia":"dom","hora":"21:00","episodios":3}]}
+Ejemplo. Pedido: "terminar la fase 4 antes de fin de mes, solo findes a la tarde"
+{"mensaje":"Te armo la Fase 4 los sábados y domingos a la tarde, hasta fin de mes.","listo":true,"desde":null,"hasta":"FIN_MES","horarios":[{"dias":["sab","dom"],"hora":"16:00","cantidad":2}],"fases":["Fase 4"],"titulos":[],"series":true,"episodiosPorTanda":2,"xmen":false,"revistas":false,"fijos":[]}`;
+const eom=()=>{const d=fk(TODAY);return dk(new Date(d.getFullYear(),d.getMonth()+1,0))};
+const tomorrow=()=>{const d=fk(TODAY);d.setDate(d.getDate()+1);return dk(d)};
+function iaJSON(t){t=String(t||"").replace(/```(?:json)?/gi,"");const a=t.indexOf("{"),b=t.lastIndexOf("}");if(a<0||b<=a)return null;try{return JSON.parse(t.slice(a,b+1))}catch(e){return null}}
+const DIAS_K=["lun","mar","mie","jue","vie","sab","dom"];
+// deja solo valores con sentido
+function iaClean(o){o=o&&typeof o==="object"?o:{};const ok=s=>typeof s==="string"&&/^\d{4}-\d\d-\d\d$/.test(s),okT=s=>typeof s==="string"&&/^([01]?\d|2[0-3]):[0-5]\d$/.test(s)?s.padStart(5,"0"):null;
+const int=(v,a,b,d)=>{v=Math.round(+v);return Number.isFinite(v)?Math.min(b,Math.max(a,v)):d};
+const ds=a=>(Array.isArray(a)?a:[a]).map(x=>nrm(x).slice(0,3)).filter(x=>DIAS_K.includes(x));
+const horarios=(Array.isArray(o.horarios)?o.horarios:[]).slice(0,14).map(h=>({dias:[...new Set(ds(h&&h.dias))],hora:okT(h&&h.hora)||"21:00",cantidad:int(h&&h.cantidad,1,6,1)})).filter(h=>h.dias.length);
+const fijos=(Array.isArray(o.fijos)?o.fijos:[]).slice(0,20).map(f=>({titulo:String(f&&f.titulo||"").slice(0,100),...(ok(f&&f.fecha)?{fecha:f.fecha}:{}),...(ds(f&&f.dia)[0]?{dia:ds(f.dia)[0]}:{}),...(okT(f&&f.hora)?{hora:okT(f.hora)}:{}),...(f&&f.episodios?{episodios:int(f.episodios,1,20,2)}:{})})).filter(f=>f.titulo);
+return {mensaje:String(o.mensaje||"").slice(0,800).trim(),listo:horarios.length>0||(o.listo!==false&&fijos.length>0),desde:ok(o.desde)?o.desde:null,hasta:ok(o.hasta)?o.hasta:null,horarios,fijos,
+fases:(Array.isArray(o.fases)?o.fases:[]).slice(0,12).map(x=>String(x).slice(0,20)),titulos:(Array.isArray(o.titulos)?o.titulos:[]).slice(0,60).map(x=>String(x).slice(0,100)),
+series:o.series!==false,episodiosPorTanda:int(o.episodiosPorTanda,1,12,2),xmen:o.xmen===true,revistas:o.revistas===true}}
+// Intérprete propio (sin IA): entiende las frases más comunes. Sirve de respaldo y para completar lo que la IA se olvide.
+const NUM={un:1,una:1,uno:1,dos:2,tres:3,cuatro:4,cinco:5,seis:6};
+function iaLocal(text){const t=" "+nrm(text)+" ",sp={horarios:[],fijos:[],fases:[],titulos:[],series:true,episodiosPorTanda:2,xmen:false,revistas:false,desde:null,hasta:null};
+const dayWords=c=>{const s=new Set();
+if(/entre semana|dias de semana|de semana|lunes a viernes|dias habiles/.test(c))["lun","mar","mie","jue","vie"].forEach(d=>s.add(d));
+if(/finde|fines? de semana/.test(c))["sab","dom"].forEach(d=>s.add(d));
+if(/todos los dias|todas las noches|cada dia|todos los dias|diario/.test(c))DIAS_K.forEach(d=>s.add(d));
+[["lun","lunes"],["mar","martes"],["mie","miercoles"],["jue","jueves"],["vie","viernes"],["sab","sabado"],["dom","domingo"]].forEach(([k,w])=>{if(new RegExp("\\b"+w+"s?\\b").test(c))s.add(k)});return [...s]};
+const hourOf=c=>{let m=c.match(/a las (\d{1,2})(?:[ :.h](\d{2}))?/)||c.match(/\b(\d{1,2})(?:[:.](\d{2}))? ?(?:hs|h|horas)\b/)||c.match(/desde las (\d{1,2})(?:[ :.h](\d{2}))?/);
+if(m){let h=+m[1];if(h<=11&&/noche|tarde/.test(c)&&h>=1)h+=12;if(h>23)return null;return String(h).padStart(2,"0")+":"+(m[2]||"00")}
+if(/a la noche|de noche|por la noche/.test(c))return "21:00";if(/a la tarde|de tarde|por la tarde/.test(c))return "16:00";if(/a la manana|de manana|por la manana/.test(c))return "10:00";if(/mediodia/.test(c))return "13:00";return null};
+const countOf=c=>{const m=c.match(/\b(\d|un|una|uno|dos|tres|cuatro|cinco|seis)\s+(?:pelis?|peliculas?|tandas?|cosas|por dia|capitulos? seguidos)/);return m?(NUM[m[1]]||+m[1]):null};
+const titles=ALL.map(n=>[n,nrm(n)]).filter(([,k])=>k.length>=4&&k!=="x men").sort((a,b)=>b[1].length-a[1].length);
+const titleIn=c=>titles.filter(([,k])=>(" "+c+" ").includes(" "+k+" ")).map(x=>x[0]);
+// "solo quiero ver Thor y Loki": esos títulos son el filtro, no pedidos para un día
+const so=t.match(/solo (?:quiero |quisiera )?(?:ver )?([^,.;]+)/);let only=so?titleIn(so[1]):[];if(only.length)sp.titulos=only;
+// frases separadas por punto; dentro de cada una, pedazos separados por coma o "y"
+let lastHour=null;
+for(const seg of t.split(/[.;!?]| pero | tambien /)){let parts=seg.split(/,| y /).map(x=>x.trim()).filter(Boolean),groups=[];
+for(const x of parts){const ds=dayWords(" "+x+" "),ti=titleIn(x).filter(n=>!only.includes(n)),h=hourOf(" "+x+" "),n=countOf(" "+x+" "),g=groups[groups.length-1];
+// un pedazo sin días ni título completa al anterior ("los sábados, 3 pelis desde las 15")
+if(!ds.length&&!ti.length&&g){g.h=g.h||h;g.n=g.n||n;g.e=g.e||x.match(/(\d+)\s*(?:episodios?|capitulos?|caps?)/);continue}
+// "los viernes y sábados a la noche": días seguidos se juntan si el anterior no tenía hora ni cantidad propia
+if(ds.length&&!ti.length&&g&&!g.ti.length&&g.ds.length&&!g.h&&!g.n){g.ds.push(...ds);g.h=h;g.n=n;continue}
+groups.push({ds,ti,h,n,e:x.match(/(\d+)\s*(?:episodios?|capitulos?|caps?)/)})}
+// un título sin día toma el día del pedazo siguiente o anterior ("WandaVision el domingo")
+for(let i=0;i<groups.length;i++){const g=groups[i];if(g.ti.length&&!g.ds.length){const o=groups[i+1]&&!groups[i+1].ti.length?groups[i+1]:null;if(o&&o.ds.length){g.ds=o.ds;g.h=g.h||o.h;g.e=g.e||o.e;o.used=true}}}
+for(const g of groups){if(g.used)continue;if(g.h)lastHour=g.h;
+if(g.ti.length&&g.ds.length){for(const n of g.ti)sp.fijos.push({titulo:n,dia:g.ds[0],...(g.h?{hora:g.h}:{}),...(g.e?{episodios:+g.e[1]}:{})});continue}
+if(g.ds.length)sp.horarios.push({dias:[...new Set(g.ds)],hora:g.h||"",cantidad:g.n||1})}}
+// horarios sin hora: la última hora mencionada, o las 21
+for(const h of sp.horarios)if(!h.hora)h.hora=lastHour||"21:00";
+for(const m of t.matchAll(/fase (\d)/g))sp.fases.push("Fase "+m[1]);
+if(/x ?men|mutantes/.test(t)){sp.xmen=true;if(/solo (la saga )?x ?men/.test(t))sp.fases.push("X-Men")}
+if(/solo (pelis|peliculas)|sin series|nada de series/.test(t))sp.series=false;
+const ep=t.match(/de a (\d+)\s*(?:episodios?|capitulos?|caps?)/)||t.match(/(\d+)\s*(?:episodios?|capitulos?|caps?) por (?:tanda|dia|vez)/);if(ep)sp.episodiosPorTanda=Math.min(12,+ep[1]);
+if(/fin de mes|antes de que termine el mes/.test(t))sp.hasta=eom();
+if(/esta semana/.test(t)){const d=fk(TODAY);d.setDate(d.getDate()+((7-d.getDay())%7));sp.hasta=dk(d)}
+const hm_=t.match(/hasta el (\d{1,2})\b/);if(hm_){const d=fk(TODAY);let x=new Date(d.getFullYear(),d.getMonth(),+hm_[1]);if(x<d)x=new Date(d.getFullYear(),d.getMonth()+1,+hm_[1]);sp.hasta=dk(x)}
+if(/\bdesde hoy|\bhoy\b/.test(t))sp.desde=TODAY;
+if(/volver a ver|de nuevo|otra vez|revivir/.test(t))sp.revistas=true;
+sp.listo=sp.horarios.length>0||sp.fijos.length>0;return sp}
+// combina lo que entendió la IA con lo que entendió el intérprete propio
+function iaMerge(ai,lo){if(!ai)return lo;const s={...ai};
+if(!s.horarios.length&&lo.horarios.length)s.horarios=lo.horarios;
+for(const f of lo.fijos)if(!s.fijos.some(x=>iaFind(x.titulo)===f.titulo))s.fijos.push(f);
+// si la IA metió en "titulos" algo que en realidad era para un día puntual, no lo uso como filtro
+s.titulos=s.titulos.filter(x=>!s.fijos.some(f=>iaFind(f.titulo)===iaFind(x)));
+if(!s.fases.length&&lo.fases.length)s.fases=lo.fases;
+if(!lo.series)s.series=false;if(lo.xmen)s.xmen=true;if(lo.revistas)s.revistas=true;
+if(!s.hasta&&lo.hasta)s.hasta=lo.hasta;if(lo.episodiosPorTanda!==2&&s.episodiosPorTanda===2)s.episodiosPorTanda=lo.episodiosPorTanda;
+s.listo=s.horarios.length>0||s.fijos.length>0;return s}
+async function iaAsk(turns){const hoy=fk(TODAY),prox=[];for(let i=0;i<14;i++){const d=new Date(hoy);d.setDate(d.getDate()+i);prox.push(DIAS_K[(d.getDay()+6)%7]+" "+dk(d))}
+const series=D.flatMap(p=>p[1].filter(m=>m[2]&&!QT[m[0]]).map(m=>m[0]));
+const ctx=`Hoy: ${TODAY} (${DS[hoy.getDay()]}). Próximos días: ${prox.join(", ")}. Fases: ${D.map(p=>p[0]).join(", ")}. Series: ${series.join(", ")}.`;
+const msgs=[{role:"system",content:IA_SYS.replace("FIN_MES",eom())+"\n\n"+ctx},...turns.slice(-8).map(t=>({role:t.role,content:String(t.text).slice(0,1500)}))];
+for(const p of IA_PROV){try{const r=await fetch(p.url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(p.body(msgs)),signal:AbortSignal.timeout(p.ms)});
+if(!r.ok)continue;const j=await r.json(),c=j&&j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content,o=iaJSON(c);if(o)return iaClean(o)}catch(e){}}
+return null}
 function iaOpen(){const o=$("ia");o.hidden=false;document.body.style.overflow="hidden";o.classList.remove("in");void o.offsetWidth;o.classList.add("in");iaDraw();setTimeout(()=>$("iaIn").focus(),60)}
 function iaClose(){const o=$("ia");o.hidden=true;if($("dv").hidden&&$("ov").hidden&&$("mo").hidden)document.body.style.overflow="";$("iaOpen").focus()}
 function iaItem(p,i,j){const q=pos[p.n]||wk[p.n],img=q&&OK[q]?`style="background-image:${h2(cu(q))}"`:"";
@@ -329,11 +415,13 @@ if(iaBusy)h+=`<div class="iam a typ" aria-label="La IA está pensando"><i></i><i
 log.innerHTML=h;log.scrollTop=log.scrollHeight;$("iaGo").disabled=iaBusy;$("iaIn").disabled=iaBusy}
 async function iaSend(text){text=String(text||"").trim();if(!text||iaBusy)return;
 iaTurns=iaTurns.filter(t=>!t.err);iaTurns.push({role:"user",text});iaBusy=true;$("iaIn").value="";iaDraw();
-let r;try{const res=await fetch("/api/ia",{method:"POST",headers:{"Content-Type":"application/json"},cache:"no-store",
-body:JSON.stringify({turnos:iaTurns.filter(t=>!t.err).map(t=>({role:t.role,text:t.text})),contexto:iaCtx()})});
-r=await res.json().catch(()=>null);if(!res.ok||!r||!r.ok)throw new Error(r&&r.error||"La IA no respondió. Probá de nuevo.")}
-catch(e){iaBusy=false;iaTurns.push({role:"assistant",text:e.message&&!/fetch|network/i.test(e.message)?e.message:"Sin conexión con la IA. Probá de nuevo.",err:true});iaDraw();return}
-iaBusy=false;const sp=r.spec||{},reply=String(r.reply||"").trim();let items=[],note="";
+const lo=iaLocal(text);let ai=null;
+try{ai=await iaAsk(iaTurns.filter(t=>!t.err))}catch(e){ai=null}
+// si la IA gratuita no responde, sigo con lo que entendió el intérprete propio
+let r;if(ai)r={reply:ai.mensaje,spec:iaMerge(ai,lo)};
+else if(lo.listo)r={reply:"La IA gratuita no respondió, pero te armé esto con lo que entendí de tu mensaje.",spec:lo};
+else{iaBusy=false;iaTurns.push({role:"assistant",text:"La IA gratuita no respondió y no llegué a entender qué días podés. Probá de nuevo, o escribilo así: \"entre semana a las 21, los sábados 3 desde las 15\".",err:true});iaDraw();return}
+iaBusy=false;const sp=r.spec||{},reply=String(r.reply||"").trim();if(!sp.listo&&!reply)r.reply="¿Qué días y a qué hora podés ver?";let items=[],note="";
 if(sp.listo){const B=iaBuild(sp);items=B.items;note=B.note}
 // en el historial queda lo que entendió la IA, para que pueda corregirlo si le pedís cambios
 const t={role:"assistant",text:(reply||"Listo.")+"\nPreferencias: "+JSON.stringify(sp),show:(reply||"Te armé una propuesta.")+(note?"\n"+note:"")};
