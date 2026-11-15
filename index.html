@@ -26,10 +26,10 @@
 <div class="top"><div><p class="kick">Universo Cinematográfico de Marvel</p><h1>Mi maratón <em>del UCM</em></h1><p class="sub" id="sub"></p></div>
 <div class="ring" role="img" aria-label="Progreso total"><svg viewBox="0 0 120 120"><defs><linearGradient id="gr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff5c85"/><stop offset="1" stop-color="#8b6bff"/></linearGradient></defs><circle class="tr" cx="60" cy="60" r="50"/><circle id="rg" cx="60" cy="60" r="50" stroke-dasharray="314.2" stroke-dashoffset="314.2"/></svg><span class="pc"><b><span id="pc">0</span><i>%</i></b></span></div></div>
 <div class="seg" id="seg"></div>
-<p class="xst" id="xst"></p>
 <button class="nxt" id="nxt" hidden></button>
 <button class="nxt pln" id="pln" hidden></button>
 <label class="sw"><input type="checkbox" id="shs"> Mostrar series</label>
+<label class="sw"><input type="checkbox" id="sxm"> Mostrar X-Men</label>
 </aside>
 <section class="content">
 <div class="vw" role="tablist" aria-label="Vista"><button role="tab" id="vbP" aria-selected="true">Películas</button><button role="tab" id="vbC" aria-selected="false">Calendario</button></div>
@@ -39,21 +39,7 @@
 <div class="flt" id="flt"><button data-f="all" aria-pressed="true">Todas</button><button data-f="pend" aria-pressed="false">Pendientes</button></div>
 <div class="grid" id="grid"></div>
 <div id="rmv"></div>
-<p class="hint"><span class="tip" aria-hidden="true">💡</span><span>Tocá un póster para marcarlo como visto. Con la <b>i</b> ves la sinopsis, el tráiler, puntuás y elegís qué día la ves.</span></p>
 <p class="hint st" id="st" role="status"></p>
-<details class="gd" id="gd"><summary>¿Cómo guardo mi progreso?</summary><div class="gdb">
-<div class="gcta"><p><b>Lo más fácil: creá una cuenta.</b> Solo usuario y contraseña. Tus vistas, puntajes, favorita y fechas del calendario se guardan solos y aparecen en cualquier dispositivo donde inicies sesión.</p><button type="button" class="mbtn" data-acc>Iniciar sesión o crear cuenta</button></div>
-<p>Sin cuenta, tus películas vistas, los puntajes que enviaste, tu favorita y las fechas del calendario se guardan <b>solo en este navegador</b>. Si abrís la página en otro celular o computadora, o si borrás los datos del navegador, empezás de cero. Para pasar tu progreso a otro dispositivo sin cuenta:</p>
-<ol><li>Tocá <b>Copiar enlace de progreso</b> y mandátelo (WhatsApp, notas, mail).</li><li>Abrí ese enlace en el otro dispositivo y aceptá cargar el progreso.</li></ol>
-<p class="nt">El enlace lleva vistas, puntajes y favorita. Las fechas del calendario no viajan: quedan en el dispositivo donde las pusiste (o en Mi Agenda, si las mandaste).</p>
-<div class="ac"><button id="cpl">Copiar enlace de progreso</button></div>
-<p class="nt">Si el enlace no te sirve (por ejemplo, desde el ícono de la pantalla de inicio, que puede tener su propia memoria separada de Safari), usá el código: copialo y pegalo abajo en el otro lado. Podés pegarlo con texto alrededor, no hace falta recortarlo. Cambia cada vez que marcás algo o enviás un puntaje, así que copialo de nuevo si avanzaste.</p>
-<div class="code" id="cd"></div>
-<div class="ac"><button id="cpy">Copiar mi código</button></div>
-<p class="nt" style="margin-top:18px">¿Tenés un código o un enlace? Pegalo acá. Esto reemplaza el progreso de este dispositivo.</p>
-<div class="key"><input id="cin" placeholder="Pegá tu código o enlace acá" autocomplete="off" autocapitalize="characters" spellcheck="false"><button id="cld">Cargar</button></div>
-<p class="nt" id="cmsg"></p>
-</div></details>
 </div>
 <div id="vCal" hidden aria-label="Calendario del maratón">
 <button type="button" class="iab" id="iaOpen"><span class="iai0" aria-hidden="true">✨</span><span><b>Armá tu calendario con IA</b><small>Contale cuándo podés ver y te propone fechas. Vos elegís qué agregar.</small></span><span class="iaar" aria-hidden="true">→</span></button>

@@ -13,10 +13,10 @@ const relD=n=>REL[n]?new Date(REL[n]+"T00:00:00"):null;
 const isSoon=n=>{const d=relD(n);return!!d&&d>new Date()};
 const fmtD=d=>d.toLocaleDateString("es-AR",{day:"numeric",month:"long",year:"numeric"});
 const HUES=[350,28,48,160,215,275,195];
-let seen={},pos={},tab=0,QT={},SS=true,flt="all",qq="";
+let seen={},pos={},tab=0,QT={},SS=true,XM=true,flt="all",qq="";
 const ld=k=>{try{return JSON.parse(localStorage.getItem(k))||{}}catch(e){return{}}};
 const sv=(k,v)=>{let ok=true;try{localStorage.setItem(k,JSON.stringify(v))}catch(e){ok=false}if(typeof onSave==="function")onSave(k);return ok}; // onSave: sincroniza con la cuenta (cuenta.js)
-seen=ld("ucm-vistas");pos=ld("ucm-posters");QT=ld("ucm-quitadas");try{SS=localStorage.getItem("ucm-series")!=="0";const t=+localStorage.getItem("ucm-tab");if(t>=0&&t<D.length)tab=t}catch(e){}
+seen=ld("ucm-vistas");pos=ld("ucm-posters");QT=ld("ucm-quitadas");try{SS=localStorage.getItem("ucm-series")!=="0";XM=localStorage.getItem("ucm-xmen")!=="0";const t=+localStorage.getItem("ucm-tab");if(t>=0&&t<D.length)tab=t}catch(e){}
 let fav=ld("ucm-fav-v2").n||null,fbusy=false;
 const MON={
 "Iron Man":["186","584,9"],
@@ -153,7 +153,8 @@ const LOGO={
 "Disney+":"https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/disney-plus.svg"};
 const logoOf=n=>{const pl=plat(n);if(!LOGO[pl])return`<span class="pl"><b class="ptx">${pl}</b></span>`;return`<span class="pl"><img src="${LOGO[pl]}" alt="${pl}" title="${pl}" onerror="this.outerHTML='<b class=ptx>'+this.alt+'</b>'"></span>`};
 const PL={"Daredevil":"Netflix","Spider-Man: Homecoming":"Varía según el país","Spider-Man: Lejos de casa":"Varía según el país","Spider-Man: No Way Home":"Varía según el país","Spider-Man: Brand New Day":"Varía según el país"},plat=n=>PL[n]||"Disney+";
-const vis=m=>!QT[m[0]]&&(SS||!m[2]);
+const XMS=new Set(XT<0?[]:D[XT][1].map(m=>m[0])); // títulos de la saga X-Men
+const vis=m=>!QT[m[0]]&&(SS||!m[2])&&(XM||!XMS.has(m[0]));
 const W={"Iron Man":"Iron_Man_(2008_film)","El Increíble Hulk":"The_Incredible_Hulk_(film)","Iron Man 2":"Iron_Man_2","Thor":"Thor_(film)","Capitán América: El primer vengador":"Captain_America:_The_First_Avenger","Los Vengadores":"The_Avengers_(2012_film)","Iron Man 3":"Iron_Man_3","Thor: El mundo oscuro":"Thor:_The_Dark_World","Capitán América: El soldado de invierno":"Captain_America:_The_Winter_Soldier","Guardianes de la Galaxia":"Guardians_of_the_Galaxy_(film)","Vengadores: La era de Ultrón":"Avengers:_Age_of_Ultron","Ant-Man":"Ant-Man_(film)","Capitán América: Civil War":"Captain_America:_Civil_War","Doctor Strange":"Doctor_Strange_(2016_film)","Guardianes de la Galaxia Vol. 2":"Guardians_of_the_Galaxy_Vol._2","Spider-Man: Homecoming":"Spider-Man:_Homecoming","Thor: Ragnarok":"Thor:_Ragnarok","Black Panther":"Black_Panther_(film)","Vengadores: Infinity War":"Avengers:_Infinity_War","Ant-Man y la Avispa":"Ant-Man_and_the_Wasp","Capitana Marvel":"Captain_Marvel_(film)","Vengadores: Endgame":"Avengers:_Endgame","Spider-Man: Lejos de casa":"Spider-Man:_Far_From_Home","Viuda Negra":"Black_Widow_(2021_film)","Shang-Chi":"Shang-Chi_and_the_Legend_of_the_Ten_Rings","Eternals":"Eternals_(film)","Spider-Man: No Way Home":"Spider-Man:_No_Way_Home","Doctor Strange en el multiverso de la locura":"Doctor_Strange_in_the_Multiverse_of_Madness","Thor: Love and Thunder":"Thor:_Love_and_Thunder","Black Panther: Wakanda Forever":"Black_Panther:_Wakanda_Forever","Ant-Man y la Avispa: Quantumanía":"Ant-Man_and_the_Wasp:_Quantumania","Guardianes de la Galaxia Vol. 3":"Guardians_of_the_Galaxy_Vol._3","The Marvels":"The_Marvels","Deadpool & Wolverine":"Deadpool_&_Wolverine","Capitán América: Brave New World":"Captain_America:_Brave_New_World","Thunderbolts*":"Thunderbolts*","Los 4 Fantásticos: Primeros pasos":"The_Fantastic_Four:_First_Steps","Spider-Man: Brand New Day":"Spider-Man:_Brand_New_Day","Avengers: Doomsday":"Avengers:_Doomsday","Avengers: Secret Wars":"Avengers:_Secret_Wars","X-Men":"X-Men_(film)","X-Men 2":"X2_(film)","X-Men: La batalla final":"X-Men:_The_Last_Stand","X-Men orígenes: Wolverine":"X-Men_Origins:_Wolverine","X-Men: Primera generación":"X-Men:_First_Class","Wolverine: Inmortal":"The_Wolverine_(film)","X-Men: Días del futuro pasado":"X-Men:_Days_of_Future_Past","Deadpool":"Deadpool_(film)","X-Men: Apocalipsis":"X-Men:_Apocalypse","Logan":"Logan_(film)","Deadpool 2":"Deadpool_2","X-Men: Fénix Oscura":"Dark_Phoenix_(film)","Los nuevos mutantes":"The_New_Mutants_(film)","WandaVision":"WandaVision","The Falcon and the Winter Soldier":"The_Falcon_and_the_Winter_Soldier","Loki":"Loki_(TV_series)","What If...?":"What_If...?_(TV_series)","Hawkeye":"Hawkeye_(miniseries)","Moon Knight":"Moon_Knight_(miniseries)","Ms. Marvel":"Ms._Marvel_(miniseries)","She-Hulk: Attorney at Law":"She-Hulk:_Attorney_at_Law","I Am Groot":"I_Am_Groot","Secret Invasion":"Secret_Invasion_(miniseries)","Echo":"Echo_(miniseries)","Agatha All Along":"Agatha_All_Along","Daredevil: Born Again":"Daredevil:_Born_Again","Daredevil":"Daredevil_(TV_series)","Ironheart":"Ironheart_(miniseries)","Eyes of Wakanda":"Eyes_of_Wakanda","Marvel Zombies":"Marvel_Zombies_(miniseries)","VisionQuest":"VisionQuest","The Punisher: One Last Kill":"The_Punisher:_One_Last_Kill"};
 let wk=ld("ucm-wiki3");try{localStorage.removeItem("ucm-wiki2")}catch(e){}
 const cu=u=>'url("'+String(u).replace(/["\\]/g,"\\$&").replace(/[\n\r]/g,"")+'")'; // url() de CSS segura: las URLs de Wikipedia traen paréntesis
@@ -191,23 +192,20 @@ const ch=[];for(let i=0;i<need.length;i+=40)ch.push(need.slice(i,i+40));
 Promise.all(ch.map(run)).then(()=>{sv("ucm-wiki3",wk);show()}).catch(e=>{st.textContent="No se pudieron cargar algunos pósters. Probá recargar la página más tarde."})}
 
 const $=id=>document.getElementById(id),esc=s=>s.replace(/"/g,"&quot;");
-$("seg").innerHTML=D.map((p,i)=>p[2]?"":`<div style="flex:${p[1].length}"><i id="s${i}" style="background:hsl(${HUES[i]} 75% 58%)"></i></div>`).join("");
+$("seg").innerHTML=D.map((p,i)=>`<div style="flex:${p[1].length}"><i id="s${i}" style="background:hsl(${HUES[i]} 75% 58%)"></i></div>`).join("");
 function stats(){
 codeUpd();
 let total=0,done=0;
-let xl=0,xd=0;
-D.forEach(([,ms,ex],i)=>{const l=ms.filter(vis),d=l.filter(m=>seen[m[0]]).length;
+D.forEach(([,ms],i)=>{const l=ms.filter(vis),d=l.filter(m=>seen[m[0]]).length;
 $("t"+i).textContent=d+"/"+l.length;
-if(ex){xl+=l.length;xd+=d;return}
 total+=l.length;done+=d;
 const sg=$("s"+i);sg.style.width=(l.length?d/l.length*100:0)+"%";sg.parentNode.style.flex=l.length;sg.parentNode.style.display=l.length?"":"none";
 });
 const pc=total?done/total:0;
 $("pc").textContent=Math.round(pc*100);$("rg").style.strokeDashoffset=314.2*(1-pc);
 // minutos de películas (no series) que faltan ver, para mostrar cuánto queda
-let rest=0;if(typeof R!=="undefined")D.forEach(([,ms,ex])=>{if(!ex)ms.forEach(m=>{if(vis(m)&&!m[2]&&!seen[m[0]]&&!isSoon(m[0]))rest+=R[m[0]]||0})});
+let rest=0;if(typeof R!=="undefined")D.forEach(([,ms])=>ms.forEach(m=>{if(vis(m)&&!m[2]&&!seen[m[0]]&&!isSoon(m[0]))rest+=R[m[0]]||0}));
 $("sub").innerHTML=total&&done===total?"<b>¡Las viste todas!</b> Maratón completo.":`<b>${done}</b> de ${total} vistas${rest?` · te quedan <b>~${Math.round(rest/60)} h</b> de películas`:""}`;
-$("xst").innerHTML=XT<0?"":`Extra X-Men: <b>${xd} de ${xl}</b>${xl&&xd===xl?" · ¡completo!":""}`;
 nextUp();planUpd();
 }
 // Siguiente película sin ver, en orden (primero el UCM, después X-Men)
@@ -217,12 +215,13 @@ if(!hit){b.hidden=true;return}
 b.hidden=false;b.dataset.i=hit[0];b.dataset.n=hit[1][0];
 b.innerHTML=`<span>Siguiente para ver · ${D[hit[0]][0]}</span><b>${hit[1][0]}</b>`}
 function tabs(){
-$("tabs").innerHTML=D.map((p,i)=>`<button class="tab${p[2]?" xm":""}" role="tab" data-i="${i}" aria-selected="${i===tab}" style="--h:${HUES[i]}">${p[2]?"★ ":""}${p[0]}<small id="t${i}"></small></button>`).join("");
+if(!XM&&D[tab][2])tab=0;
+$("tabs").innerHTML=D.map((p,i)=>`<button class="tab${p[2]?" xm":""}" role="tab" data-i="${i}" aria-selected="${i===tab}" style="--h:${HUES[i]}"${p[2]&&!XM?" hidden":""}>${p[2]?"★ ":""}${p[0]}<small id="t${i}"></small></button>`).join("");
 }
 function grid(){
 const g=$("grid");g.style.setProperty("--h",HUES[tab]);$("flt").style.setProperty("--h",HUES[tab]);
 const x=$("xin");x.style.setProperty("--h",HUES[tab]);
-x.innerHTML=D[tab][2]?`<div class="xin"><small>Apartado extra</small><b>La saga X-Men</b><p>Las películas de mutantes de 20th Century Fox, en orden de estreno. No son parte del UCM, así que no cuentan para tu porcentaje, pero conectan con él a través de Deadpool &amp; Wolverine.</p></div>`:"";
+x.innerHTML=D[tab][2]?`<div class="xin"><small>Apartado extra</small><b>La saga X-Men</b><p>Las películas de mutantes de 20th Century Fox, en orden de estreno. No son parte del UCM, pero conectan con él a través de Deadpool &amp; Wolverine. Mientras tengas activado “Mostrar X-Men”, cuentan para tu porcentaje.</p></div>`:"";
 const qn=qq.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
 const all=D[tab][1].filter(vis),list=all.filter(m=>(flt==="all"||(flt==="seen")===!!seen[m[0]])&&(!qn||m[0].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").includes(qn)));
 g.innerHTML=list.map(m=>{const n=m[0],q=pos[n]||wk[n],p=q&&OK[q]?q:"";
@@ -448,14 +447,12 @@ if(N>0n)return null;
 if(okNew===null){if(B32[sum%32]!==s0.slice(-1))return null}else if(!okNew)return null;
 return{v:out,f:fi}}
 function codeUpd(){const e=$("cd");if(e)e.textContent=enc()}
-function cmsg(t){$("cmsg").textContent=t}
+function cmsg(t){if($("cmsg"))$("cmsg").textContent=t;else if(typeof toast==="function")toast(t);else alert(t)}
 async function copyTxt(txt,btn){let ok=false;
 try{await navigator.clipboard.writeText(txt);ok=true}catch(e){
 try{const ta=document.createElement("textarea");ta.value=txt;ta.style.cssText="position:fixed;top:0;opacity:0";document.body.appendChild(ta);ta.focus();ta.select();ta.setSelectionRange(0,txt.length);ok=document.execCommand("copy");ta.remove()}catch(x){}}
 const t0=btn.textContent;btn.textContent=ok?"¡Copiado!":"No se pudo copiar: mantené apretado el código de arriba";setTimeout(()=>btn.textContent=t0,2500);return ok}
 const linkOf=()=>location.href.split("#")[0]+"#p="+enc().replace(/-/g,"");
-$("cpy").onclick=()=>copyTxt(enc(),$("cpy"));
-$("cpl").onclick=()=>copyTxt(linkOf(),$("cpl"));
 // Busca un código válido dentro de lo que se pegó: enlace, código solo, o código con texto alrededor
 function findCode(t){t=String(t||"");
 const m=t.match(/[#?&]p=([0-9A-Za-z.\-]+)/);if(m){const r=dec(m[1]);if(r)return r}
@@ -469,15 +466,10 @@ ORD.forEach((n,i)=>{const x=v[i];if(x>=11)seen[n]=true;const w=x>=11?x-11:x;if(w
 fav=r.f?ORD[r.f-1]:null;sv("ucm-fav-v2",{n:fav});sv("ucm-vistas",seen);sv("ucm-enviados-v2",sent);
 grid();stats();if(cur)draw();
 return "Listo: se cargaron "+Object.keys(seen).length+" películas vistas y "+Object.keys(sent).length+" puntajes."}
-$("cld").onclick=()=>{const r=findCode($("cin").value);
-if(!r){cmsg("No encontré un código válido en lo que pegaste. Revisá que esté completo o pegá el enlace entero.");return}
-const q=sumry(r);if(!q.s&&!q.p&&!r.f){cmsg(EMPTY);return}
-if(!confirm("Este progreso trae "+q.s+" películas vistas y "+q.p+" puntajes. Esto reemplaza el de este dispositivo. ¿Continuar?"))return;
-cmsg(applyCode(r));$("cin").value=""};
 // Al abrir un enlace de progreso se ofrece cargarlo
 (function(){const m=location.hash.match(/^#p=([0-9A-Za-z.\-]+)/);if(!m)return;
 const r=dec(m[1]);try{history.replaceState(null,"",location.href.split("#")[0])}catch(e){}
-setTimeout(()=>{$("gd").open=true;
+setTimeout(()=>{
 if(!r){cmsg("El enlace de progreso está incompleto o dañado.");return}
 const q=sumry(r);if(!q.s&&!q.p&&!r.f){cmsg(EMPTY);return}
 if(confirm("Este enlace trae "+q.s+" películas vistas y "+q.p+" puntajes. ¿Cargarlo? Reemplaza el progreso de este dispositivo."))cmsg(applyCode(r))},400)})();
@@ -499,6 +491,8 @@ $("rmv").addEventListener("toggle",e=>{if(e.target.tagName==="DETAILS")RMO=e.tar
 $("rmv").addEventListener("click",e=>{const r=e.target.dataset&&e.target.dataset.r;if(r){delete QT[r];sv("ucm-quitadas",QT);rmDraw();grid();stats()}});
 $("shs").checked=SS;
 $("shs").onchange=e=>{SS=e.target.checked;try{localStorage.setItem("ucm-series",SS?"1":"0")}catch(x){}grid();stats()};
+$("sxm").checked=XM;
+$("sxm").onchange=e=>{XM=e.target.checked;try{localStorage.setItem("ucm-xmen",XM?"1":"0")}catch(x){}tabs();grid();stats();if(typeof dvDraw==="function"&&!$("dv").hidden)dvDraw()};
 rmDraw();
 setTimeout(flushPend,2000);
 // el arranque (tabs, grid, stats, pósters) está al final de plan.js

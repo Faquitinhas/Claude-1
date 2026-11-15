@@ -161,8 +161,9 @@ const badge=here.length?here.map(k=>`<span class="dvt">${plan[k].t?"⏰ "+plan[k
 const prog=isS(n)&&dn?`<span class="dvp">${Math.min(dn,tot)}/${tot} ep programados</span>`:"";
 return `<div class="cell"><div class="card ${seen[n]?"done":""} ${p?"img":""} ${here.length?"pk":""}" role="button" tabindex="0" aria-label="${h2(n)}${here.length?", programada este día":""}${seen[n]?", vista":""}" data-n="${h2(n)}"${p?` style="background-image:${h2(cu(p))}"`:""}><span class="yr">${m[1]}${m[2]?" · Serie":""}</span><span class="nm">${h2(n)}</span><span class="stamp">vista</span><span class="tags">${badge}${prog}${isSoon(n)?'<span class="soon">Próximamente</span>':""}</span></div></div>`}
 function dvDraw(){dvHead();
+if(!XM&&D[dvTab][2])dvTab=0;
 $("dvtabs").innerHTML=D.map((p,i)=>{const c=onDay(selDay).filter(k=>ph(k)===i).length;
-return `<button class="tab${p[2]?" xm":""}" role="tab" data-i="${i}" aria-selected="${i===dvTab}" style="--h:${HUES[i]}">${p[2]?"★ ":""}${p[0]}${c?`<small class="dvn">${c}</small>`:""}</button>`}).join("");
+return `<button class="tab${p[2]?" xm":""}" role="tab" data-i="${i}" aria-selected="${i===dvTab}" style="--h:${HUES[i]}"${p[2]&&!XM?" hidden":""}>${p[2]?"★ ":""}${p[0]}${c?`<small class="dvn">${c}</small>`:""}</button>`}).join("");
 const g=$("dvg"),l=D[dvTab][1].filter(vis);g.style.setProperty("--h",HUES[dvTab]);
 g.innerHTML=l.map(dvCard).join("")||`<p class="empty">No hay nada para mostrar en esta fase.</p>`;
 fitAll();l.forEach(m=>{const n=m[0],q=pos[n]||wk[n];if(q&&!OK[q])want(n,q)})}
