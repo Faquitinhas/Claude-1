@@ -254,13 +254,18 @@ let vt="info",TR=ld("ucm-trailers"),cur=null,sent=ld("ucm-enviados-v2"),pick={},
 const slug=n=>(en(n)+" "+yrOf(n)).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
 const key=(n,v)=>slug(n)+"-"+v;
 const HC=ld("ucm-hist"); // último promedio conocido de cada peli, para mostrarlo al toque
+// Base propia (Upstash Redis vía /api/votos). Si todavía no está conectada (501), se usa el contador viejo.
+let VM=null; // "rd" | "ab"
+async function vmode(){if(VM)return VM;const r=await fetch("/api/votos",{cache:"no-store"});if(r.status===501||r.status===404)return VM="ab";if(!r.ok)throw new Error("HTTP "+r.status);return VM="rd"}
+async function hit(n,k){if(await vmode()==="rd"){const r=await fetch("/api/votos",{method:"POST",headers:{"Content-Type":"application/json"},cache:"no-store",body:JSON.stringify({s:slug(n),k:String(k)})});if(!r.ok)throw 0;return}
+const r=await fetch(AB+"hit/"+NS+"/"+key(n,k),{cache:"no-store"});if(!r.ok)throw 0}
 // El contador gratuito bloquea por un rato si recibe muchas consultas seguidas (HTTP 429),
 // así que se consulta lo mínimo: se reutiliza el promedio reciente, se piden pocas claves y de a poco.
 const HFRESH=10*60e3;
 let abBlock=0; // hasta cuándo esperar si el contador nos frenó
 async function loadHist(n,force){
 const h=hist[n];if(h&&((h.loading&&Date.now()-h.t0<30000)||(h.ok&&!h.mine&&Date.now()-h.t<6e4)))return;
-if(!force&&HC[n]&&Date.now()-HC[n].t<HFRESH){hist[n]={ok:true,t:HC[n].t,c:HC[n].c.slice(),f:HC[n].f||0};if(cur===n&&vt==="info")draw();return}
+if(!force&&HC[n]&&Date.now()-HC[n].t<(VM==="rd"?15e3:HFRESH)){hist[n]={ok:true,t:HC[n].t,c:HC[n].c.slice(),f:HC[n].f||0};if(cur===n&&vt==="info")draw();return}
 const t0=Date.now();if(!(h&&h.mine))hist[n]={loading:true,t0}; // si ya mostramos tu voto sumado, se queda a la vista mientras se actualiza
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const g1=async k=>{const w=abBlock-Date.now();if(w>0)await sleep(w);
@@ -273,6 +278,9 @@ const g=async k=>{let e;for(let a=0;a<3;a++){try{return await g1(k)}catch(x){e=x
 // de a 3 consultas por vez
 const all=async ks=>{const out=[];for(let i=0;i<ks.length;i+=3)out.push(...await Promise.all(ks.slice(i,i+3).map(g)));return out};
 try{
+if(await vmode()==="rd"){const c=new AbortController(),tt=setTimeout(()=>c.abort(),20000);let j;
+try{const r=await fetch("/api/votos?s="+encodeURIComponent(slug(n)),{cache:"no-store",signal:c.signal});if(!r.ok)throw new Error("HTTP "+r.status);j=await r.json()}finally{clearTimeout(tt)}
+hist[n]={ok:true,t:Date.now(),c:j.c.slice(0,10),f:j.f||0};HC[n]={c:hist[n].c,f:hist[n].f,t:hist[n].t};sv("ucm-hist",HC);if(cur===n&&vt==="info")draw();return}
 const base=await all([...Array.from({length:10},(_,i)=>key(n,i+1)),key(n,"fav")]);
 // las correcciones (votos cambiados) solo pueden existir donde hay votos
 const need=[];base.forEach((v,i)=>{if(v>0)need.push(i)});
@@ -281,7 +289,7 @@ const sub=Array(11).fill(0);need.forEach((i,j)=>sub[i]=xs[j]);
 const c=base.slice(0,10).map((x,i)=>Math.max(0,x-sub[i]));
 hist[n]={ok:true,t:Date.now(),c,f:Math.max(0,base[10]-sub[10])};HC[n]={c,f:hist[n].f,t:hist[n].t};sv("ucm-hist",HC);
 }catch(e){if(hist[n]&&hist[n].ok&&hist[n].mine)return; // ya mostramos el promedio con tu voto sumado
-hist[n]={err:true,why:e&&e.busy?"el contador de puntajes está saturado, probá en un ratito":e&&e.name==="AbortError"?"tardó demasiado en responder":"sin conexión con el contador de puntajes"}}
+hist[n]={err:true,why:VM==="rd"?(e&&e.name==="AbortError"?"tardó demasiado en responder":"sin conexión con la base de puntajes"):e&&e.busy?"el contador de puntajes está saturado, probá en un ratito":e&&e.name==="AbortError"?"tardó demasiado en responder":"sin conexión con el contador de puntajes"}}
 if(cur===n&&vt==="info")draw()}
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&cur&&vt==="info"){const h=hist[cur];if(!h||h.err){delete hist[cur];draw();loadHist(cur)}}});
 addEventListener("online",()=>{if(cur&&vt==="info"){delete hist[cur];draw();loadHist(cur)}});
@@ -369,7 +377,7 @@ else{b=`<p class="nt">Buscando tráiler…</p>`;findTr(n).then(i=>{if(cur===n&&v
 $("sb").innerHTML=head(n,yrOf(n))+b}
 let editing={};
 const PEND=ld("ucm-pend");
-async function flushPend(){let ch=false;for(const n of Object.keys(PEND)){const rest=[];for(const o of PEND[n]){try{const r=await fetch(AB+"hit/"+NS+"/"+key(n,o)+"-x",{cache:"no-store"});if(!r.ok)throw 0}catch(e){rest.push(o)}}if(rest.length)PEND[n]=rest;else delete PEND[n];ch=true}if(ch)sv("ucm-pend",PEND)}
+async function flushPend(){let ch=false;for(const n of Object.keys(PEND)){const rest=[];for(const o of PEND[n]){try{await hit(n,o+"-x")}catch(e){rest.push(o)}}if(rest.length)PEND[n]=rest;else delete PEND[n];ch=true}if(ch)sv("ucm-pend",PEND)}
 function draw(){
 if(vt==="tr")return drawTr();
 const n=cur,y=yrOf(n),t=en(n),done=sent[n],ed2=!!editing[n],lock=done&&!ed2,sel=ed2?(pick[n]||done):(done||pick[n]||0),h=hist[n];
@@ -394,11 +402,10 @@ $("sb").innerHTML=`<div class="pgr"><button type="button" id="pgp" aria-label="P
 let adb=false;
 async function adjust(sc,a){
 const n=cur;if(adb)return;adb=true;msg="";draw();
-try{const u=AB+"hit/"+NS+"/"+key(n,sc)+(a==="+"?"":"-x");
-const r=await fetch(u,{cache:"no-store"});if(!r.ok)throw 0;delete hist[n]}
+try{await hit(n,sc+(a==="+"?"":"-x"));delete hist[n]}
 catch(e){msg=a==="+"?"No se pudo sumar el voto.":"No se pudo restar el voto."}
 adb=false;if(cur===n){draw();loadHist(n)}}
-async function hitFav(n,k){const r=await fetch(AB+"hit/"+NS+"/"+key(n,k),{cache:"no-store"});if(!r.ok)throw 0}
+const hitFav=(n,k)=>hit(n,k);
 async function setFav(n){
 if(fbusy)return;fbusy=true;msg="";const old=fav;
 fav=old===n?null:n;sv("ucm-fav-v2",{n:fav});grid();codeUpd();draw();
@@ -413,8 +420,7 @@ async function enviar(){
 const n=cur,v=pick[n],old=sent[n];if(!v||busy||old===v||(old&&!editing[n]))return;
 busy=true;msg="";draw();
 try{
-const r=await fetch(AB+"hit/"+NS+"/"+key(n,v),{cache:"no-store"});
-if(!r.ok)throw 0;
+await hit(n,v);
 sent[n]=v;sv("ucm-enviados-v2",sent);
 if(old){PEND[n]=(PEND[n]||[]).concat(old);sv("ucm-pend",PEND)}
 codeUpd();delete editing[n];grid();
