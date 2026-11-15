@@ -56,6 +56,7 @@
 </div></details>
 </div>
 <div id="vCal" hidden aria-label="Calendario del maratón">
+<button type="button" class="iab" id="iaOpen"><span class="iai0" aria-hidden="true">✨</span><span><b>Armá tu calendario con IA</b><small>Contale cuándo podés ver y te propone fechas. Vos elegís qué agregar.</small></span><span class="iaar" aria-hidden="true">→</span></button>
 <div class="calh"><button id="cp" aria-label="Mes anterior">‹</button><h2 id="cm"></h2><button id="chy" class="hoy">Hoy</button><button id="cn" aria-label="Mes siguiente">›</button></div>
 <div class="cal"><div class="dw"><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span></div><div class="cg" id="cg"></div></div>
 <details class="box" id="autoBox"><summary>Armar el plan automático</summary>
@@ -88,6 +89,12 @@
 <div class="grid" id="dvg"></div>
 </div></div>
 <div class="tp" id="tp" hidden><div class="tpb" id="tpb" role="dialog" aria-modal="true" aria-labelledby="tpH"><button type="button" class="mx" id="tpX" aria-label="Cerrar">×</button><div class="tpp" id="tpp" aria-hidden="true"></div><div id="tpi"></div></div></div>
+<div class="ia" id="ia" hidden role="dialog" aria-modal="true" aria-labelledby="iaT"><div class="iabx">
+<div class="iah"><button type="button" class="dvb" id="iaX" aria-label="Cerrar">←</button><div><p class="dvk">Asistente con IA</p><h2 id="iaT">Armemos tu calendario</h2></div></div>
+<div class="ialog" id="iaLog" aria-live="polite"></div>
+<form class="iaf" id="iaF"><textarea id="iaIn" rows="1" maxlength="1200" placeholder="Ej: entre semana puedo a las 22, quiero terminar la Fase 3" aria-label="Mensaje para la IA"></textarea><button class="iasend" id="iaGo" aria-label="Enviar">➤</button></form>
+<p class="iafo">La IA puede equivocarse: revisá la propuesta antes de agregarla.</p>
+</div></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="app.js?v=13b202a"></script>
 <script src="plan.js?v=13b202a"></script>

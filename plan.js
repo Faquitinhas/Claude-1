@@ -258,6 +258,70 @@ $("tp").addEventListener("change",e=>{if(e.target.id==="tpIn"&&/^\d\d:\d\d$/.tes
 document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;
 if(!$("tp").hidden){e.stopImmediatePropagation();tpClose(false)}else if(!$("dv").hidden&&$("mo").hidden){e.stopImmediatePropagation();dvClose()}},true);
 
+// ---------- Asistente con IA: propone fechas, vos elegís qué agregar ----------
+let iaTurns=[],iaBusy=false,iaProps=[]; // iaProps[i] = {items:[...], done:false}
+const IA_SUG=["Quiero ver lo que me falta: una peli por noche a las 22","Los fines de semana puedo ver 3 pelis desde las 15","Quiero terminar la Fase 4 antes de fin de mes","Metele las series de a 2 episodios entre semana"];
+function iaCtx(){const hoy=fk(TODAY);
+const catalogo=D.flatMap(p=>p[1].filter(vis).map(m=>{const n=m[0],s=!!EP[n];
+return {titulo:n,fase:p[0],anio:m[1],serie:s,...(s?{episodios:EP[n][0],minEp:EP[n][1],programados:epDone(n)}:{minutos:R[n]||120}),vista:!!seen[n],proximamente:isSoon(n),enCalendario:keysOf(n).length>0}}));
+const agenda=pkeys().sort((a,b)=>ord(a).localeCompare(ord(b))).map(k=>({fecha:plan[k].d,hora:plan[k].t,titulo:bn(k),...(EP[bn(k)]?{episodios:epOf(k)}:{}),fin:endT(k)}));
+return {hoy:TODAY,diaSemana:DS[hoy.getDay()],catalogo,plan:agenda}}
+const iaFind=t=>{t=String(t||"").trim();if(ALL.includes(t))return t;const l=t.toLowerCase();return ALL.find(n=>n.toLowerCase()===l)||null};
+// valida y prepara cada tanda propuesta
+function iaPrep(items){return items.map(i=>{const n=iaFind(i.titulo);if(!n||i.fecha<TODAY)return null;
+const ser=!!EP[n],e=ser?Math.max(1,Math.min(EP[n][0],i.episodios||defEp(n))):0;
+const a=tm(i.hora),b=a+(ser?e*EP[n][1]:(R[n]||120));
+const cl=pkeys().filter(k=>plan[k].d===i.fecha&&plan[k].t&&!(!ser&&k===n)).find(k=>{const s=tm(plan[k].t);return a<s+dur(k)&&s<b});
+return {n,d:i.fecha,t:i.hora,e,ser,fin:fm(b),cl:cl||null,mv:!ser&&plan[n]?plan[n]:null,seen:!!seen[n],on:!seen[n],added:false}}).filter(Boolean)}
+function iaOpen(){const o=$("ia");o.hidden=false;document.body.style.overflow="hidden";o.classList.remove("in");void o.offsetWidth;o.classList.add("in");iaDraw();setTimeout(()=>$("iaIn").focus(),60)}
+function iaClose(){const o=$("ia");o.hidden=true;if($("dv").hidden&&$("ov").hidden&&$("mo").hidden)document.body.style.overflow="";$("iaOpen").focus()}
+function iaItem(p,i,j){const q=pos[p.n]||wk[p.n],img=q&&OK[q]?`style="background-image:${h2(cu(q))}"`:"";
+return `<li class="iai${p.added?" ok":""}" style="--h:${HUES[ph(p.n)]}"><label><input type="checkbox" data-pi="${i}" data-pj="${j}" ${p.on?"checked":""} ${p.added?"disabled":""}><i class="iap" ${img}></i><span class="iat"><b>${h2(p.n)}</b><small>${fdate(p.d)} · ${p.t} a ${p.fin}${p.ser?` · ${epTxt(p.e)}`:""}</small>${p.added?`<em class="iaok">✓ Agregada</em>`:p.cl?`<em class="iaw">Se superpone con ${h2(bn(p.cl))}${p.cl&&plan[p.cl]?" ("+plan[p.cl].t+")":""}</em>`:p.mv?`<em class="iaw">Ya estaba el ${fdate(p.mv.d)}: se mueve</em>`:p.seen?`<em class="iamu">Ya la viste</em>`:""}</span></label></li>`}
+function iaDraw(){const log=$("iaLog");
+let h=iaTurns.length?"":`<div class="iaw0"><div class="iabig" aria-hidden="true">✨</div><h3>Contame cómo querés verlas</h3><p>Decime qué días y a qué hora podés, o qué querés terminar primero. Te propongo un plan y <b>vos elegís qué agregar</b>: nada se guarda solo.</p><div class="iasg">${IA_SUG.map(s=>`<button type="button" data-sg="${h2(s)}">${h2(s)}</button>`).join("")}</div></div>`;
+let pi=0;
+for(const t of iaTurns){if(t.role==="user"){h+=`<div class="iam u"><p>${h2(t.text)}</p></div>`;continue}
+if(t.err){h+=`<div class="iam a er"><p>${h2(t.text)}</p><button type="button" class="lnk" data-retry>Reintentar</button></div>`;continue}
+h+=`<div class="iam a"><p>${h2(t.show||t.text).replace(/\n/g,"<br>")}</p>`;
+if(t.pi!==undefined){const P=iaProps[t.pi],sel=P.items.filter(x=>x.on&&!x.added).length,left=P.items.filter(x=>!x.added).length;
+h+=`<div class="iapr"><div class="iaph"><b>Propuesta · ${P.items.length} ${P.items.length===1?"tanda":"tandas"}</b>${left?`<span><button type="button" class="lnk" data-all="${t.pi}">Todas</button> · <button type="button" class="lnk" data-none="${t.pi}">Ninguna</button></span>`:""}</div>
+<ul>${P.items.map((p,j)=>iaItem(p,t.pi,j)).join("")}</ul>
+${left?`<button type="button" class="mbtn" data-add="${t.pi}" ${sel?"":"disabled"}>${sel?`Agregar ${sel===left&&sel>1?"las "+sel:sel===1?"la elegida":"las "+sel+" elegidas"} al calendario`:"Elegí qué agregar"}</button><p class="iahn">Podés destildar las que no quieras, o pedirme cambios abajo.</p>`:`<button type="button" class="mbtn sec" data-go="${h2(P.items[0].d)}">Ver en el calendario</button>`}</div>`}
+h+=`</div>`;pi++}
+if(iaBusy)h+=`<div class="iam a typ" aria-label="La IA está pensando"><i></i><i></i><i></i></div>`;
+log.innerHTML=h;log.scrollTop=log.scrollHeight;$("iaGo").disabled=iaBusy;$("iaIn").disabled=iaBusy}
+async function iaSend(text){text=String(text||"").trim();if(!text||iaBusy)return;
+iaTurns=iaTurns.filter(t=>!t.err);iaTurns.push({role:"user",text});iaBusy=true;$("iaIn").value="";iaDraw();
+let r;try{const res=await fetch("/api/ia",{method:"POST",headers:{"Content-Type":"application/json"},cache:"no-store",
+body:JSON.stringify({turnos:iaTurns.filter(t=>!t.err).map(t=>({role:t.role,text:t.text})),contexto:iaCtx()})});
+r=await res.json().catch(()=>null);if(!res.ok||!r||!r.ok)throw new Error(r&&r.error||"La IA no respondió. Probá de nuevo.")}
+catch(e){iaBusy=false;iaTurns.push({role:"assistant",text:e.message&&!/fetch|network/i.test(e.message)?e.message:"Sin conexión con la IA. Probá de nuevo.",err:true});iaDraw();return}
+iaBusy=false;const items=iaPrep(r.items||[]),reply=String(r.reply||"").trim();
+// en el historial queda también la propuesta, para que la IA sepa qué sugirió si le pedís cambios
+const sum=items.length?"\n[Propuesta enviada: "+items.map(p=>`${p.n} ${p.d} ${p.t}${p.ser?" ("+p.e+" ep)":""}`).join("; ")+"]":"";
+const t={role:"assistant",text:(reply||"Mirá la propuesta.")+sum,show:reply||"Mirá la propuesta."};
+if(items.length){iaProps.push({items});t.pi=iaProps.length-1}
+else if((r.items||[]).length)t.show+="\n(No pude armar tandas válidas con esa propuesta. Probá pedírmelo de otra forma.)";
+iaTurns.push(t);iaDraw();
+const last=$("iaLog").querySelector(".iam.a:last-of-type");if(last)last.animate([{opacity:0,transform:"translateY(10px)"},{opacity:1,transform:"none"}],{duration:280,easing:"ease-out"})}
+function iaAdd(i){const P=iaProps[i],sel=P.items.filter(x=>x.on&&!x.added);if(!sel.length)return;
+for(const p of sel){if(p.ser){const k=keysOf(p.n).length?newKey(p.n):p.n;plan[k]={d:p.d,t:p.t,e:p.e}}else plan[p.n]={d:p.d,t:p.t};p.added=true}
+savePlan();iaDraw();toast(`Agregaste ${sel.length} ${sel.length===1?"tanda":"tandas"} al calendario`)}
+$("iaOpen").onclick=iaOpen;$("iaX").onclick=iaClose;
+$("iaF").addEventListener("submit",e=>{e.preventDefault();iaSend($("iaIn").value)});
+$("iaIn").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();iaSend($("iaIn").value)}});
+$("iaLog").addEventListener("change",e=>{const c=e.target;if(c.dataset.pi===undefined)return;iaProps[+c.dataset.pi].items[+c.dataset.pj].on=c.checked;
+const y=$("iaLog").scrollTop;iaDraw();$("iaLog").scrollTop=y});
+$("iaLog").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
+if(b.dataset.sg)return iaSend(b.dataset.sg);
+if(b.hasAttribute("data-retry")){const u=[...iaTurns].reverse().find(t=>t.role==="user");iaTurns=iaTurns.filter(t=>!t.err);if(u){iaTurns.pop();iaSend(u.text)}return}
+const y=$("iaLog").scrollTop;
+if(b.dataset.all!==undefined){iaProps[+b.dataset.all].items.forEach(x=>x.on=true);iaDraw();$("iaLog").scrollTop=y;return}
+if(b.dataset.none!==undefined){iaProps[+b.dataset.none].items.forEach(x=>x.on=false);iaDraw();$("iaLog").scrollTop=y;return}
+if(b.dataset.add!==undefined){iaAdd(+b.dataset.add);$("iaLog").scrollTop=y;return}
+if(b.dataset.go){iaClose();goDay(b.dataset.go)}});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("ia").hidden&&$("mo").hidden){e.stopImmediatePropagation();iaClose()}},true);
+
 // arranque
 tabs();grid();stats();loadPosters();
 try{if(localStorage.getItem("ucm-vista")==="cal")setView("cal")}catch(e){}

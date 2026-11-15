@@ -457,3 +457,56 @@ h1{font-size:3.1rem}
 .tds .tde span{min-width:0}
 .tds .tdx{flex:none;width:auto;justify-content:center;padding:0 14px;border:1px solid #ff5c8566;background:#ff5c8514;color:#ff9db3;font-weight:600}
 .tds .tdx:hover{background:#ff5c8526;border-color:#ff5c85}
+
+/* ====== Asistente con IA ====== */
+.iab{display:flex;align-items:center;gap:14px;width:100%;margin:0 0 16px;padding:14px 16px;border-radius:16px;border:1px solid #8b6bff66;background:linear-gradient(120deg,#ff5c8526,#8b6bff26 60%,transparent),var(--card);color:var(--fg);font:inherit;text-align:left;cursor:pointer;transition:border-color .2s,transform .15s}
+.iab:hover{border-color:#8b6bff}.iab:active{transform:scale(.99)}
+.iai0{flex:none;width:42px;height:42px;border-radius:13px;display:grid;place-items:center;font-size:1.3rem;background:linear-gradient(135deg,#ff5c85,#8b6bff);box-shadow:0 8px 20px -6px #8b6bffaa}
+.iab b{display:block;font:800 1.02rem "Bricolage Grotesque",system-ui,sans-serif}
+.iab small{display:block;color:var(--mut);font-size:.85rem;line-height:1.35;margin-top:2px}
+.iab>span:nth-child(2){flex:1;min-width:0}
+.iaar{flex:none;color:#c4b3ff;font-size:1.2rem}
+.ia{position:fixed;inset:0;z-index:22;display:grid;place-items:center;padding:0;background:#05041acc;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.ia.in .iabx{animation:dvin .32s cubic-bezier(.2,1,.3,1)}
+.iabx{box-sizing:border-box;display:flex;flex-direction:column;width:100%;height:100%;max-width:720px;background:radial-gradient(600px 260px at 50% -80px,#8b6bff2e,transparent 70%),var(--bg);padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}
+.iah{display:flex;gap:14px;align-items:center;padding:12px 16px;border-bottom:1px solid #2c265880}
+.iah h2{margin:2px 0 0;font:800 1.3rem/1.1 "Bricolage Grotesque",system-ui,sans-serif;letter-spacing:-.02em}
+.ialog{flex:1;overflow:auto;overscroll-behavior:contain;padding:16px;display:flex;flex-direction:column;gap:12px}
+.iaw0{margin:auto 0;text-align:center;padding:10px 4px}
+.iabig{width:64px;height:64px;margin:0 auto 12px;border-radius:20px;display:grid;place-items:center;font-size:1.9rem;background:linear-gradient(135deg,#ff5c85,#8b6bff);box-shadow:0 14px 34px -10px #8b6bffcc}
+.iaw0 h3{margin:0 0 6px;font:800 1.4rem "Bricolage Grotesque",system-ui,sans-serif}
+.iaw0 p{margin:0 auto;max-width:440px;color:var(--mut);font-size:.95rem}.iaw0 p b{color:var(--fg)}
+.iasg{display:flex;flex-direction:column;gap:8px;margin-top:18px}
+.iasg button{padding:11px 14px;border-radius:13px;border:1px solid var(--line);background:var(--card);color:var(--fg);font:500 .92rem "DM Sans",system-ui,sans-serif;text-align:left;cursor:pointer;transition:border-color .2s}
+.iasg button:hover{border-color:#8b6bff}
+.iam{max-width:88%;padding:10px 14px;border-radius:16px;font-size:.95rem;line-height:1.45}
+.iam p{margin:0}
+.iam.u{align-self:flex-end;background:linear-gradient(135deg,#ff5c85,#8b6bff);color:#fff;border-bottom-right-radius:5px}
+.iam.a{align-self:flex-start;background:var(--card);border:1px solid var(--line);border-bottom-left-radius:5px;max-width:100%}
+.iam.er{border-color:#ff7a5966;color:#ffab94}.iam.er .lnk{margin-top:6px}
+.typ{display:flex;gap:5px;padding:14px 16px}
+.typ i{width:7px;height:7px;border-radius:50%;background:#c4b3ff;animation:tb 1s infinite ease-in-out}
+.typ i:nth-child(2){animation-delay:.15s}.typ i:nth-child(3){animation-delay:.3s}
+@keyframes tb{0%,80%,100%{transform:translateY(0);opacity:.4}40%{transform:translateY(-5px);opacity:1}}
+.iapr{margin-top:12px}
+.iaph{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:8px;font-size:.88rem}
+.iaph .lnk{font-size:.85rem}
+.iapr ul{list-style:none;margin:0 0 12px;padding:0;display:flex;flex-direction:column;gap:6px}
+.iai label{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:12px;background:var(--bg);border-left:4px solid hsl(var(--h) 75% 60%);cursor:pointer}
+.iai input{flex:none;width:20px;height:20px;accent-color:#8b6bff}
+.iap{flex:none;width:34px;aspect-ratio:2/3;border-radius:5px;background:linear-gradient(165deg,hsl(var(--h) 65% 40%),hsl(calc(var(--h) + 35) 55% 14%)) center/cover}
+.iat{min-width:0;display:flex;flex-direction:column}
+.iat b{font-weight:600;line-height:1.25}
+.iat small{color:var(--mut);font-size:.82rem}
+.iat em{font-style:normal;font-size:.78rem;margin-top:2px}
+.iaw{color:#ffd75a}.iamu{color:var(--mut)}.iaok{color:#3ddc97}
+.iai.ok label{opacity:.75}
+.iahn{margin:8px 0 0;color:var(--mut);font-size:.8rem;text-align:center}
+.iaf{display:flex;gap:8px;align-items:flex-end;padding:10px 16px 4px;border-top:1px solid #2c265880}
+.iaf textarea{flex:1;min-height:46px;max-height:140px;box-sizing:border-box;padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:#0b0a22;color:var(--fg);font:500 1rem "DM Sans",system-ui,sans-serif;resize:none;field-sizing:content}
+.iaf textarea:focus{outline:none;border-color:#8b6bff;box-shadow:0 0 0 4px #8b6bff2e}
+.iasend{flex:none;width:46px;height:46px;border-radius:50%;border:0;background:linear-gradient(135deg,#ff5c85,#8b6bff);color:#fff;font-size:1.1rem;cursor:pointer}
+.iasend:disabled,.iaf textarea:disabled{opacity:.5}
+.iafo{margin:4px 16px 10px;color:#6e679c;font-size:.75rem;text-align:center}
+@media(min-width:760px){.ia{padding:24px}.iabx{height:min(860px,100%);border-radius:24px;border:1px solid #3a3270;box-shadow:0 40px 90px -20px #000;overflow:hidden}}
+@media (prefers-reduced-motion:reduce){.ia.in .iabx,.typ i{animation:none}}
