@@ -156,7 +156,9 @@ const PL={"Daredevil":"Netflix","Spider-Man: Homecoming":"Varía según el país
 const XMS=new Set(XT<0?[]:D[XT][1].map(m=>m[0])); // títulos de la saga X-Men
 const vis=m=>!QT[m[0]]&&(SS||!m[2])&&(XM||!XMS.has(m[0]));
 const W={"Iron Man":"Iron_Man_(2008_film)","El Increíble Hulk":"The_Incredible_Hulk_(film)","Iron Man 2":"Iron_Man_2","Thor":"Thor_(film)","Capitán América: El primer vengador":"Captain_America:_The_First_Avenger","Los Vengadores":"The_Avengers_(2012_film)","Iron Man 3":"Iron_Man_3","Thor: El mundo oscuro":"Thor:_The_Dark_World","Capitán América: El soldado de invierno":"Captain_America:_The_Winter_Soldier","Guardianes de la Galaxia":"Guardians_of_the_Galaxy_(film)","Vengadores: La era de Ultrón":"Avengers:_Age_of_Ultron","Ant-Man":"Ant-Man_(film)","Capitán América: Civil War":"Captain_America:_Civil_War","Doctor Strange":"Doctor_Strange_(2016_film)","Guardianes de la Galaxia Vol. 2":"Guardians_of_the_Galaxy_Vol._2","Spider-Man: Homecoming":"Spider-Man:_Homecoming","Thor: Ragnarok":"Thor:_Ragnarok","Black Panther":"Black_Panther_(film)","Vengadores: Infinity War":"Avengers:_Infinity_War","Ant-Man y la Avispa":"Ant-Man_and_the_Wasp","Capitana Marvel":"Captain_Marvel_(film)","Vengadores: Endgame":"Avengers:_Endgame","Spider-Man: Lejos de casa":"Spider-Man:_Far_From_Home","Viuda Negra":"Black_Widow_(2021_film)","Shang-Chi":"Shang-Chi_and_the_Legend_of_the_Ten_Rings","Eternals":"Eternals_(film)","Spider-Man: No Way Home":"Spider-Man:_No_Way_Home","Doctor Strange en el multiverso de la locura":"Doctor_Strange_in_the_Multiverse_of_Madness","Thor: Love and Thunder":"Thor:_Love_and_Thunder","Black Panther: Wakanda Forever":"Black_Panther:_Wakanda_Forever","Ant-Man y la Avispa: Quantumanía":"Ant-Man_and_the_Wasp:_Quantumania","Guardianes de la Galaxia Vol. 3":"Guardians_of_the_Galaxy_Vol._3","The Marvels":"The_Marvels","Deadpool & Wolverine":"Deadpool_&_Wolverine","Capitán América: Brave New World":"Captain_America:_Brave_New_World","Thunderbolts*":"Thunderbolts*","Los 4 Fantásticos: Primeros pasos":"The_Fantastic_Four:_First_Steps","Spider-Man: Brand New Day":"Spider-Man:_Brand_New_Day","Avengers: Doomsday":"Avengers:_Doomsday","Avengers: Secret Wars":"Avengers:_Secret_Wars","X-Men":"X-Men_(film)","X-Men 2":"X2_(film)","X-Men: La batalla final":"X-Men:_The_Last_Stand","X-Men orígenes: Wolverine":"X-Men_Origins:_Wolverine","X-Men: Primera generación":"X-Men:_First_Class","Wolverine: Inmortal":"The_Wolverine_(film)","X-Men: Días del futuro pasado":"X-Men:_Days_of_Future_Past","Deadpool":"Deadpool_(film)","X-Men: Apocalipsis":"X-Men:_Apocalypse","Logan":"Logan_(film)","Deadpool 2":"Deadpool_2","X-Men: Fénix Oscura":"Dark_Phoenix_(film)","Los nuevos mutantes":"The_New_Mutants_(film)","WandaVision":"WandaVision","The Falcon and the Winter Soldier":"The_Falcon_and_the_Winter_Soldier","Loki":"Loki_(TV_series)","What If...?":"What_If...?_(TV_series)","Hawkeye":"Hawkeye_(miniseries)","Moon Knight":"Moon_Knight_(miniseries)","Ms. Marvel":"Ms._Marvel_(miniseries)","She-Hulk: Attorney at Law":"She-Hulk:_Attorney_at_Law","I Am Groot":"I_Am_Groot","Secret Invasion":"Secret_Invasion_(miniseries)","Echo":"Echo_(miniseries)","Agatha All Along":"Agatha_All_Along","Daredevil: Born Again":"Daredevil:_Born_Again","Daredevil":"Daredevil_(TV_series)","Ironheart":"Ironheart_(miniseries)","Eyes of Wakanda":"Eyes_of_Wakanda","Marvel Zombies":"Marvel_Zombies_(miniseries)","VisionQuest":"VisionQuest","The Punisher: One Last Kill":"The_Punisher:_One_Last_Kill"};
-let wk=ld("ucm-wiki3");try{localStorage.removeItem("ucm-wiki2")}catch(e){}
+// pósters propios para títulos que todavía no tienen póster oficial (si Wikipedia publica uno, se usa ese)
+const LP={"Avengers: Secret Wars":"data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 600 900%22%3E%3Cdefs%3E%3CradialGradient id=%22a%22 cx=%2250%25%22 cy=%2242%25%22 r=%2275%25%22%3E%3Cstop offset=%220%22 stop-color=%22%235b2bd6%22/%3E%3Cstop offset=%22.45%22 stop-color=%22%231c0d4a%22/%3E%3Cstop offset=%221%22 stop-color=%22%2305030f%22/%3E%3C/radialGradient%3E%3ClinearGradient id=%22t%22 x1=%220%22 y1=%220%22 x2=%220%22 y2=%221%22%3E%3Cstop offset=%220%22 stop-color=%22%23fff%22/%3E%3Cstop offset=%221%22 stop-color=%22%23ffcf6b%22/%3E%3C/linearGradient%3E%3CradialGradient id=%22g%22 cx=%2250%25%22 cy=%2250%25%22 r=%2250%25%22%3E%3Cstop offset=%220%22 stop-color=%22%23ffd27a%22 stop-opacity=%22.95%22/%3E%3Cstop offset=%22.35%22 stop-color=%22%23ff5c85%22 stop-opacity=%22.55%22/%3E%3Cstop offset=%221%22 stop-color=%22%238b6bff%22 stop-opacity=%220%22/%3E%3C/radialGradient%3E%3C/defs%3E%3Crect width=%22600%22 height=%22900%22 fill=%22url%28%23a%29%22/%3E%3Cg fill=%22%23fff%22%3E%3Ccircle cx=%2260%22 cy=%2290%22 r=%221.6%22/%3E%3Ccircle cx=%22140%22 cy=%22210%22 r=%221%22/%3E%3Ccircle cx=%22520%22 cy=%22120%22 r=%221.8%22/%3E%3Ccircle cx=%22470%22 cy=%22260%22 r=%221%22/%3E%3Ccircle cx=%2290%22 cy=%22430%22 r=%221.2%22/%3E%3Ccircle cx=%22545%22 cy=%22470%22 r=%221.4%22/%3E%3Ccircle cx=%22300%22 cy=%2270%22 r=%221%22/%3E%3Ccircle cx=%22210%22 cy=%22140%22 r=%221.4%22/%3E%3Ccircle cx=%22410%22 cy=%2260%22 r=%221.1%22/%3E%3Ccircle cx=%2235%22 cy=%22300%22 r=%221%22/%3E%3Ccircle cx=%22575%22 cy=%22330%22 r=%221%22/%3E%3Ccircle cx=%22250%22 cy=%22560%22 r=%221%22/%3E%3Ccircle cx=%22380%22 cy=%22600%22 r=%221.3%22/%3E%3C/g%3E%3Ccircle cx=%22300%22 cy=%22370%22 r=%22230%22 fill=%22url%28%23g%29%22/%3E%3Cg fill=%22none%22 stroke=%22%23ffd27a%22 stroke-opacity=%22.55%22%3E%3Cellipse cx=%22300%22 cy=%22370%22 rx=%22250%22 ry=%2270%22 transform=%22rotate%28-18 300 370%29%22 stroke-width=%222%22/%3E%3Cellipse cx=%22300%22 cy=%22370%22 rx=%22210%22 ry=%2256%22 transform=%22rotate%2824 300 370%29%22 stroke-width=%221.5%22 stroke=%22%23b9a2ff%22/%3E%3Cellipse cx=%22300%22 cy=%22370%22 rx=%22160%22 ry=%22160%22 stroke-width=%221%22 stroke-dasharray=%224 10%22/%3E%3C/g%3E%3Ccircle cx=%22300%22 cy=%22370%22 r=%2274%22 fill=%22%2305030f%22 stroke=%22%23ffd27a%22 stroke-width=%223%22/%3E%3Ctext x=%22300%22 y=%22398%22 text-anchor=%22middle%22 font-family=%22Arial Black,Arial,sans-serif%22 font-weight=%22900%22 font-size=%2284%22 fill=%22url%28%23t%29%22%3EA%3C/text%3E%3Ctext x=%22300%22 y=%22670%22 text-anchor=%22middle%22 font-family=%22Arial,sans-serif%22 font-weight=%22700%22 font-size=%2230%22 letter-spacing=%2214%22 fill=%22%23d9d0ff%22%3EAVENGERS%3C/text%3E%3Ctext x=%22300%22 y=%22752%22 text-anchor=%22middle%22 font-family=%22Arial Black,Arial,sans-serif%22 font-weight=%22900%22 font-size=%2278%22 letter-spacing=%222%22 textLength=%22540%22 lengthAdjust=%22spacingAndGlyphs%22 fill=%22url%28%23t%29%22%3ESECRET WARS%3C/text%3E%3Crect x=%22210%22 y=%22790%22 width=%22180%22 height=%222%22 fill=%22%23ffd27a%22 opacity=%22.7%22/%3E%3Ctext x=%22300%22 y=%22830%22 text-anchor=%22middle%22 font-family=%22Arial,sans-serif%22 font-weight=%22700%22 font-size=%2222%22 letter-spacing=%228%22 fill=%22%23ffcf6b%22%3EDICIEMBRE 2027%3C/text%3E%3C/svg%3E"};
+let wk=ld("ucm-wiki3");for(const n in LP){if(!wk[n]||wk[n]===LP[n])wk[n]=LP[n]}try{localStorage.removeItem("ucm-wiki2")}catch(e){}
 const cu=u=>'url("'+String(u).replace(/["\\]/g,"\\$&").replace(/[\n\r]/g,"")+'")'; // url() de CSS segura: las URLs de Wikipedia traen paréntesis
 // Un póster recién se muestra cuando la imagen cargó de verdad. Si falla (Wikipedia a veces la rechaza),
 // la tarjeta queda con el título a la vista en vez de quedar vacía, y se reintenta una vez.
@@ -179,8 +181,8 @@ const r=await fetch("https://api.themoviedb.org/3/search/"+(ser?"tv":"movie")+"?
 const j=await r.json(),b=(j.results||[]).find(x=>x.backdrop_path);BN[n]=b?"https://image.tmdb.org/t/p/w780"+b.backdrop_path:"";sv("ucm-banners",BN)}catch(e){return}
 if(cur===n&&vt==="info")draw()}
 function loadPosters(){
-const st=$("st"),all=Object.keys(W),need=all.filter(n=>!wk[n]);
-const show=()=>{const k=all.filter(n=>wk[n]).length;st.textContent=k<all.length?"Cargando pósters… "+k+" de "+all.length:""};
+const st=$("st"),all=Object.keys(W),need=all.filter(n=>!wk[n]||wk[n]===LP[n]);
+const show=()=>{const k=all.filter(n=>wk[n]&&wk[n]!==LP[n]||LP[n]).length;st.textContent=k<all.length?"Cargando pósters… "+k+" de "+all.length:""};
 show();if(!need.length)return;
 const T=n=>W[n].replace(/_/g," ");
 const run=ch=>fetch("https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&redirects=1&prop=pageimages&piprop=thumbnail&pithumbsize=500&pilicense=any&titles="+encodeURIComponent(ch.map(T).join("|"))).then(r=>r.json()).then(j=>{
@@ -251,17 +253,19 @@ try{if(localStorage.getItem("ucm-reset-v3")!=="1"){localStorage.removeItem("ucm-
 let vt="info",TR=ld("ucm-trailers"),cur=null,sent=ld("ucm-enviados-v2"),pick={},hist={},busy=false,msg="";
 const slug=n=>(en(n)+" "+yrOf(n)).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
 const key=(n,v)=>slug(n)+"-"+v;
+const HC=ld("ucm-hist"); // último promedio conocido de cada peli, para mostrarlo al toque
 async function loadHist(n){
 const h=hist[n];if(h&&((h.loading&&Date.now()-h.t0<15000)||(h.ok&&Date.now()-h.t<6e4)))return;
-const t0=Date.now();hist[n]={loading:true,t0};
-const g1=k=>{const c=new AbortController(),t=setTimeout(()=>c.abort(),8000);return fetch(AB+"get/"+NS+"/"+k,{cache:"no-store",signal:c.signal}).then(r=>r.status===404?0:r.ok?r.json().then(j=>+j.value||0):Promise.reject(new Error("HTTP "+r.status))).finally(()=>clearTimeout(t))};
-const g=async k=>{let e;for(let a=0;a<3;a++){try{return await g1(k)}catch(x){e=x;await new Promise(r=>setTimeout(r,500*(a+1)))}}throw e};
+const t0=Date.now();if(!(h&&h.mine))hist[n]={loading:true,t0}; // si ya mostramos tu voto sumado, se queda a la vista mientras se actualiza
+const g1=k=>{const c=new AbortController(),t=setTimeout(()=>c.abort(),15000);return fetch(AB+"get/"+NS+"/"+k,{cache:"no-store",signal:c.signal}).then(r=>r.status===404?0:r.ok?r.json().then(j=>+j.value||0):Promise.reject(new Error("HTTP "+r.status))).finally(()=>clearTimeout(t))};
+const g=async k=>{let e;for(let a=0;a<2;a++){try{return await g1(k)}catch(x){e=x;await new Promise(r=>setTimeout(r,500*(a+1)))}}throw e};
 try{
 const ks=[];for(let i=1;i<=10;i++)ks.push(key(n,i));for(let i=1;i<=10;i++)ks.push(key(n,i)+"-x");ks.push(key(n,"fav"),key(n,"fav-x"));
 const r=[];for(let i=0;i<ks.length;i+=5)r.push(...await Promise.all(ks.slice(i,i+5).map(g)));
 const c=r.slice(0,10).map((x,i)=>Math.max(0,x-r[10+i]));
-hist[n]={ok:true,t:Date.now(),c,f:Math.max(0,r[20]-r[21])};
-}catch(e){hist[n]={err:true,why:String(e&&e.name==="AbortError"?"tiempo agotado":e&&e.message||e)}}
+hist[n]={ok:true,t:Date.now(),c,f:Math.max(0,r[20]-r[21])};HC[n]={c,f:hist[n].f,t:hist[n].t};sv("ucm-hist",HC);
+}catch(e){if(hist[n]&&hist[n].ok&&hist[n].mine)return; // ya mostramos el promedio con tu voto sumado
+hist[n]={err:true,why:String(e&&e.name==="AbortError"?"tiempo agotado":e&&e.message||e)}}
 if(cur===n&&vt==="info")draw()}
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&cur&&vt==="info"){const h=hist[cur];if(!h||h.err||h.loading){delete hist[cur];draw();loadHist(cur)}}});
 addEventListener("online",()=>{if(cur&&vt==="info"){delete hist[cur];draw();loadHist(cur)}});
@@ -356,7 +360,10 @@ const n=cur,y=yrOf(n),t=en(n),done=sent[n],ed2=!!editing[n],lock=done&&!ed2,sel=
 const tr="https://www.youtube.com/results?search_query="+encodeURIComponent(t+" "+y+" tráiler oficial");
 const btns=Array.from({length:10},(_,i)=>`<button class="pt${sel===i+1?" on":""}" data-p="${i+1}" ${lock?"disabled":""} aria-label="${i+1} de 10">${i+1}</button>`).join("");
 let com;
-if(!h||h.loading)com=`<p class="nt">Cargando promedio…</p>`;
+const hc=(!h||h.loading||h.err)&&HC[n]?HC[n]:null;
+if(hc){const c=hc.c.reduce((a,b)=>a+b,0),av=c?(hc.c.reduce((a,v,i)=>a+v*(i+1),0)/c).toFixed(1):"—";
+com=`<div class="sc"><span>Promedio de todos<b>${av}</b></span><span>Tu voto<b>${done||"—"}</b></span></div><p class="nt">${h&&h.err?"No pude actualizarlo ahora: es el último que vi.":"Actualizando…"} ${c?`${c} ${c===1?"voto":"votos"}.`:""}</p>${h&&h.err?`<div class="ac"><button id="rh">Reintentar</button></div>`:""}`}
+else if(!h||h.loading)com=`<p class="nt">Cargando promedio…</p>`;
 else if(h.err)com=`<p class="nt">No pude cargar el promedio ahora${h.why?` (${h.why})`:""}.</p><div class="ac"><button id="rh">Reintentar</button></div>`;
 else{const c=h.c.reduce((a,b)=>a+b,0),av=c?(h.c.reduce((a,v,i)=>a+v*(i+1),0)/c).toFixed(1):"—";
 com=`<div class="sc"><span>Promedio de todos<b>${av}</b></span><span>Tu voto<b>${done||"—"}</b></span></div><p class="nt">${c?`${c} ${c===1?"persona puntuó":"personas puntuaron"} esta película en esta página.`:"Todavía nadie envió su puntaje. El tuyo será el primero."}</p>`}
@@ -366,7 +373,8 @@ const fv=h&&h.ok?`<p class="nt">${h.f?`Favorita de ${h.f} ${h.f===1?"persona":"p
 const act=lock?`<p class="nt">Tu voto ya cuenta en el promedio.</p><div class="ac"><button id="chg">Cambiar mi voto</button></div>`:ed2?`<p class="nt">Elegí tu nuevo puntaje (ahora tenés ${done}).</p><div class="ac"><button class="pri" id="env" ${sel&&sel!==done&&!busy?"":"disabled"}>${busy?"Guardando…":"Guardar cambio"}</button><button id="cnc" ${busy?"disabled":""}>Cancelar</button></div>`:`<div class="ac"><button class="pri" id="env" ${sel&&!busy?"":"disabled"}>${busy?"Enviando…":"Enviar mi puntaje"}</button></div>`;
 $("sh").style.setProperty("--h",HUES[tab]);
 const rd=relD(n),cdn=rd&&rd>new Date()?`<p class="cd">🗓 Estreno: ${fmtD(rd)} · faltan ${Math.ceil((rd-new Date())/864e5)} días</p>`:"";
-$("sb").innerHTML=`${head(n,y)}${cdn}<p>${S[n]}</p>${crewBox(n)}${whenBox(n)}<h4>Tu puntaje</h4><div class="pts">${btns}</div>${act}${msg?`<p class="nt">${msg}</p>`:""}${com}${fv}${monBox(n)}${ed}<div class="ac"><button id="sn">${seen[n]?"Quitar de vistas":"Marcar como vista"}</button><button id="rmx">Quitar de mi lista</button></div>`}
+const NL=navList(),NI=NL.indexOf(n);
+$("sb").innerHTML=`<div class="pgr"><button type="button" id="pgp" aria-label="Película anterior" ${navCan(-1)?"":"disabled"}>‹</button><span>${NI+1} de ${NL.length}</span><button type="button" id="pgn" aria-label="Película siguiente" ${navCan(1)?"":"disabled"}>›</button></div>${head(n,y)}${cdn}<p>${S[n]}</p>${crewBox(n)}<h4>Tu puntaje</h4><div class="pts">${btns}</div>${act}${msg?`<p class="nt">${msg}</p>`:""}${com}${fv}${monBox(n)}${ed}<div class="ac"><button id="sn">${seen[n]?"Quitar de vistas":"Marcar como vista"}</button><button id="rmx">Quitar de mi lista</button></div>`}
 let adb=false;
 async function adjust(sc,a){
 const n=cur;if(adb)return;adb=true;msg="";draw();
@@ -393,12 +401,34 @@ const r=await fetch(AB+"hit/"+NS+"/"+key(n,v),{cache:"no-store"});
 if(!r.ok)throw 0;
 sent[n]=v;sv("ucm-enviados-v2",sent);
 if(old){PEND[n]=(PEND[n]||[]).concat(old);sv("ucm-pend",PEND)}
-codeUpd();delete hist[n];delete editing[n];grid();
+codeUpd();delete editing[n];grid();
+{const b=hist[n]&&hist[n].ok?hist[n]:HC[n];if(b){const c=b.c.slice();c[v-1]++;if(old&&c[old-1]>0)c[old-1]--;hist[n]={ok:true,mine:true,t:0,c,f:b.f||0};HC[n]={c,f:b.f||0,t:Date.now()};sv("ucm-hist",HC)}else delete hist[n]}
 }catch(e){msg="No se pudo enviar tu puntaje. Revisá tu conexión e intentalo de nuevo."}
 busy=false;
 if(old&&sent[n]===v)await flushPend();
 if(cur===n)draw();
 if(sent[n])loadHist(n)}
+// ----- moverse entre películas con la ficha abierta, y entre fases con las flechas -----
+const visTabs=()=>D.map((p,i)=>i).filter(i=>D[i][1].some(vis));
+function navList(){const ns=[...document.querySelectorAll("#grid .card")].map(c=>c.dataset.n);if(ns.includes(cur))return ns;const i=D.findIndex(p=>p[1].some(m=>m[0]===cur));return i<0?[cur]:D[i][1].filter(vis).map(m=>m[0])}
+function navCan(d){const L=navList(),i=L.indexOf(cur)+d;if(i>=0&&i<L.length)return true;const T=visTabs(),j=T.indexOf(tab)+d;return j>=0&&j<T.length}
+function navTo(d){if(!cur)return;let L=navList(),i=L.indexOf(cur)+d;
+if(i<0||i>=L.length){const T=visTabs(),j=T.indexOf(tab)+d;if(j<0||j>=T.length){$("sb").animate([{transform:"translateX(0)"},{transform:`translateX(${-d*14}px)`},{transform:"translateX(0)"}],{duration:260});return}
+goTab(T[j]);L=navList();i=d>0?0:L.length-1}
+const n=L[i];if(!n)return;cur=n;editing={};msg="";vt="info";loadBanner(n);draw();loadHist(n);$("sh").scrollTop=0;
+if(!matchMedia("(prefers-reduced-motion: reduce)").matches)$("sb").animate([{opacity:.2,transform:`translateX(${d*40}px)`},{opacity:1,transform:"none"}],{duration:240,easing:"cubic-bezier(.2,.9,.3,1)"})}
+function tabTo(d){const T=visTabs(),j=T.indexOf(tab)+d;if(j<0||j>=T.length)return;goTab(T[j]);const b=document.querySelector(`.tab[data-i="${T[j]}"]`);if(b)b.scrollIntoView({block:"nearest",inline:"nearest"});
+if(!matchMedia("(prefers-reduced-motion: reduce)").matches)$("grid").animate([{opacity:.3,transform:`translateX(${d*30}px)`},{opacity:1,transform:"none"}],{duration:220,easing:"ease-out"})}
+const anyOpen=()=>["mo","dv","tp","ia"].some(id=>$(id)&&!$(id).hidden);
+document.addEventListener("keydown",e=>{if(e.key!=="ArrowLeft"&&e.key!=="ArrowRight")return;
+if(e.target.closest&&e.target.closest("input,textarea,select,[contenteditable]")||e.metaKey||e.ctrlKey||e.altKey||anyOpen())return;
+const d=e.key==="ArrowLeft"?-1:1;
+if(cur&&!$("ov").hidden){e.preventDefault();navTo(d)}
+else if($("vCal").hidden){e.preventDefault();tabTo(d)}});
+// en el celular: deslizar de costado cambia de peli (ficha abierta) o de fase (grilla)
+function swipe(el,fn){let x0=0,y0=0,on=false;el.addEventListener("touchstart",e=>{if(e.touches.length!==1)return;x0=e.touches[0].clientX;y0=e.touches[0].clientY;on=true},{passive:true});
+el.addEventListener("touchend",e=>{if(!on)return;on=false;const t=e.changedTouches[0],dx=t.clientX-x0,dy=t.clientY-y0;if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.6)fn(dx<0?1:-1)},{passive:true})}
+swipe($("sh"),d=>navTo(d));swipe($("grid"),d=>tabTo(d));
 function sheet(n){loadBanner(n);editing={};cur=n;vt="info";msg="";$("ov").hidden=false;document.body.style.overflow="hidden";draw();loadHist(n)}
 function closeSheet(){$("ov").hidden=true;document.body.style.overflow="";cur=null}
 
@@ -414,6 +444,7 @@ $("grid").addEventListener("click",e=>{const b=e.target.closest(".inf");if(b)she
 $("ov").addEventListener("click",e=>{if(e.target===$("ov"))closeSheet()});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&cur)closeSheet()});
 $("sb").addEventListener("click",e=>{
+if(e.target.closest("#pgp"))return navTo(-1);if(e.target.closest("#pgn"))return navTo(1);
 const p=e.target.dataset&&e.target.dataset.p;
 const v=e.target.dataset&&e.target.dataset.v;if(v){vt=v;draw();return}
 if(p&&(!sent[cur]||editing[cur])){pick[cur]=+p;draw()}
